@@ -1,2 +1,3 @@
 # go-storage-mining
-Storage mining module
+
+A Filecoin storage miner
