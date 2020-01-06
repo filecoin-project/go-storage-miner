@@ -14,7 +14,7 @@ import (
 
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/build"
-	address "github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/lotus/chain/address"
 	"github.com/filecoin-project/lotus/chain/events"
 	"github.com/filecoin-project/lotus/chain/gen"
 	"github.com/filecoin-project/lotus/chain/store"
@@ -90,25 +90,8 @@ func NewMiner(api storageMinerApi, addr address.Address, h host.Host, ds datasto
 }
 
 func (m *Miner) Run(ctx context.Context) error {
-	if err := m.runPreflightChecks(ctx); err != nil {
-		return xerrors.Errorf("miner preflight checks failed: %w", err)
-	}
-
-	m.events = events.NewEvents(ctx, m.api)
-
-	fps := &fpostScheduler{
-		api:    m.api,
-		sb:     m.sb,
-		actor:  m.maddr,
-		worker: m.worker,
-	}
-
-	go fps.run(ctx)
-	if err := m.sectorStateLoop(ctx); err != nil {
-		log.Errorf("%+v", err)
-		return xerrors.Errorf("failed to startup sector state loop: %w", err)
-	}
-
+	panic("don't Run me!")
+	
 	return nil
 }
 
