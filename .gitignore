@@ -5,3 +5,5 @@ extern/filecoin-ffi/rust/target
 /**/*/.DS_STORE
 .DS_STORE
 .idea
+build/.filecoin-ffi-install
+build/.update-submodules
