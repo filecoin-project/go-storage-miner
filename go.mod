@@ -1,4 +1,4 @@
-module github.com/filecoin-project/lotus
+module github.com/filecoin-project/go-storage-mining
 
 go 1.13
 
