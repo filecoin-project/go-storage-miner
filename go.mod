@@ -9,8 +9,10 @@ require (
 	github.com/Gurpartap/async v0.0.0-20180927173644-4f7f499dd9ee
 	github.com/docker/go-units v0.4.0
 	github.com/filecoin-project/chain-validation v0.0.3
-	github.com/filecoin-project/filecoin-ffi v0.0.0-20191204125133-ebb3e13addf1
+	github.com/filecoin-project/filecoin-ffi v0.0.0-20191219131535-bb699517a590
+	github.com/filecoin-project/go-address v0.0.0-20191219011437-af739c490b4f
 	github.com/filecoin-project/go-amt-ipld v0.0.0-20191205011053-79efc22d6cdc
+	github.com/filecoin-project/go-sectorbuilder v0.0.0-20191220220745-2216fe5dabfe
 	github.com/filecoin-project/lotus v0.1.5
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-beta.1
 	github.com/gorilla/mux v1.7.3
@@ -71,7 +73,7 @@ require (
 	github.com/multiformats/go-multiaddr-dns v0.2.0
 	github.com/multiformats/go-multiaddr-net v0.1.1
 	github.com/multiformats/go-multihash v0.0.10
-	github.com/multiformats/go-varint v0.0.1
+	github.com/multiformats/go-varint v0.0.2
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/otiai10/copy v1.0.2
 	github.com/polydawn/refmt v0.0.0-20190809202753-05966cbd336a
@@ -80,9 +82,9 @@ require (
 	github.com/whyrusleeping/cbor-gen v0.0.0-20191216205031-b047b6acb3c0
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7
 	github.com/whyrusleeping/pubsub v0.0.0-20131020042734-02de8aa2db3d
-	go.opencensus.io v0.22.1
+	go.opencensus.io v0.22.2
 	go.uber.org/fx v1.9.0
-	go.uber.org/multierr v1.1.0
+	go.uber.org/multierr v1.4.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543

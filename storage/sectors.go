@@ -10,7 +10,7 @@ import (
 
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/lib/padreader"
-	"github.com/filecoin-project/lotus/lib/sectorbuilder"
+	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 )
 
 const NonceIncrement = math.MaxUint64

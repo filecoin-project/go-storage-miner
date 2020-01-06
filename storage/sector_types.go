@@ -6,7 +6,7 @@ import (
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/lib/sectorbuilder"
+	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 )
 
 type TicketFn func(context.Context) (*sectorbuilder.SealTicket, error)
