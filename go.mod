@@ -15,6 +15,7 @@ require (
 	github.com/ipfs/go-log v1.0.0
 	github.com/ipfs/go-unixfs v0.2.2-0.20190827150610-868af2e9e5cb
 	github.com/libp2p/go-libp2p-core v0.2.4
+	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20191216205031-b047b6acb3c0
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543

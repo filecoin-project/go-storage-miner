@@ -85,33 +85,6 @@ func (m *Miner) sectorStateLoop(ctx context.Context) error {
 		}
 	}()
 
-	{
-		// verify on-chain state
-		trackedByID := map[uint64]*SectorInfo{}
-		for _, si := range trackedSectors {
-			i := si
-			trackedByID[si.SectorID] = &i
-		}
-
-		curTs, err := m.api.ChainHead(ctx)
-		if err != nil {
-			return xerrors.Errorf("getting chain head: %w", err)
-		}
-
-		ps, err := m.api.StateMinerProvingSet(ctx, m.maddr, curTs)
-		if err != nil {
-			return xerrors.Errorf("getting miner proving set: %w", err)
-		}
-		for _, ocs := range ps {
-			if _, ok := trackedByID[ocs.SectorID]; ok {
-				continue // TODO: check state
-			}
-
-			// TODO: attempt recovery
-			log.Warnf("untracked sector %d found on chain", ocs.SectorID)
-		}
-	}
-
 	go func() {
 		defer log.Warn("quitting deal provider loop")
 		defer close(m.stopped)
@@ -254,12 +227,6 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 		log.Warnf("sector %d entered unimplemented state 'SealCommitFailed'", update.id)
 	case api.CommitFailed:
 		log.Warnf("sector %d entered unimplemented state 'CommitFailed'", update.id)
-
-		// Faults
-	case api.Faulty:
-		m.handleSectorUpdate(ctx, sector, m.handleFaulty)
-	case api.FaultReported:
-		m.handleSectorUpdate(ctx, sector, m.handleFaultReported)
 
 	// Fatal errors
 	case api.UndefinedSectorState:

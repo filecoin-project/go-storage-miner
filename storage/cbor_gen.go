@@ -487,7 +487,7 @@ func (t *SectorInfo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.Ticket (storage.SealTicket) (struct)
+	// t.Ticket (storage.GetSealTicket) (struct)
 	if _, err := w.Write(cbg.CborEncodeMajorType(cbg.MajTextString, uint64(len("Ticket")))); err != nil {
 		return err
 	}
@@ -798,7 +798,7 @@ func (t *SectorInfo) UnmarshalCBOR(r io.Reader) error {
 	if _, err := io.ReadFull(br, t.Proof); err != nil {
 		return err
 	}
-	// t.Ticket (storage.SealTicket) (struct)
+	// t.Ticket (storage.GetSealTicket) (struct)
 
 	{
 		sval, err := cbg.ReadString(br)
