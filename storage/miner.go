@@ -24,7 +24,7 @@ type SectorBuilderAPI interface {
 	SectorSize() uint64
 	SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
 	SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
-	RateLimit()
+	RateLimit() func()
 	AddPiece(pieceSize uint64, sectorId uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
 	AcquireSectorId() (uint64, error)
 }
