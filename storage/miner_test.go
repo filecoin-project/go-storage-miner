@@ -2,10 +2,13 @@ package storage_test
 
 import (
 	"context"
+	"github.com/filecoin-project/filecoin-ffi"
+	"github.com/filecoin-project/lotus/api"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,8 +26,7 @@ func TestSectorLifecycle(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
-	cleanup, builder := createSectorBuilderForTest(t)
-	defer cleanup()
+	builder := &fakeSectorBuilderAPI{}
 
 	miner, err := storage.NewMiner(&fakeNodeApi{}, datastore.NewMapDatastore(), builder)
 	if err != nil {
@@ -41,6 +43,33 @@ func TestSectorLifecycle(t *testing.T) {
 		t.Fatalf("failed to start miner: %s", err)
 	}
 
+	var states chan api.SectorState
+
+	miner.UpdateMonitor = func(s api.SectorState) {
+			states <- s
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		for {
+			select {
+			case state := <-states:
+				if state == api.Proving {
+					// complete, exit
+					wg.Done()
+				}
+				if state == api.SealFailed || state == api.PreCommitFailed || state == api.SealCommitFailed || state == api.CommitFailed {
+					t.Fail()
+					wg.Done()
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	pieceSize := sectorbuilder.UserBytesForSectorSize(builder.SectorSize()) / 4
 	pieceReader := io.LimitReader(rand.New(rand.NewSource(42)), int64(pieceSize))
 
@@ -53,7 +82,7 @@ func TestSectorLifecycle(t *testing.T) {
 		t.Fatalf("failed to start piece-sealing flow: %s", err)
 	}
 
-	time.Sleep(time.Minute * 30)
+	wg.Wait()
 }
 
 func createCidForTesting(n int) cid.Cid {
@@ -133,3 +162,30 @@ func (f *fakeNodeApi) SetSealSeedHandler(ctx context.Context, msg cid.Cid, avail
 		})
 	}()
 }
+
+type fakeSectorBuilderAPI struct {}
+
+func (fakeSectorBuilderAPI) SectorSize() uint64 {
+	return 1024
+}
+
+func (fakeSectorBuilderAPI) SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error) {
+	return sectorbuilder.RawSealPreCommitOutput{}, nil
+}
+
+func (fakeSectorBuilderAPI) SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error) {
+	return []byte{42}, nil
+}
+
+func (fakeSectorBuilderAPI) RateLimit() func() {
+	return func() {}
+}
+
+func (fakeSectorBuilderAPI) AddPiece(pieceSize uint64, sectorId uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error) {
+	return sectorbuilder.PublicPieceInfo{Size: pieceSize}, nil
+}
+
+func (fakeSectorBuilderAPI) AcquireSectorId() (uint64, error) {
+	return 42, nil
+}
+

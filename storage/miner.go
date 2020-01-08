@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/filecoin-project/filecoin-ffi"
+	"github.com/filecoin-project/lotus/api"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log"
@@ -42,13 +43,15 @@ type Miner struct {
 	sb      SectorBuilderAPI
 	sectors *statestore.StateStore
 
+	UpdateMonitor func(api.SectorState)
+
 	sectorIncoming chan *SectorInfo
 	sectorUpdated  chan sectorUpdate
 	stop           chan struct{}
 	stopped        chan struct{}
 }
 
-func NewMiner(api NodeAPI, ds datastore.Batching, sb *sectorbuilder.SectorBuilder) (*Miner, error) {
+func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, error) {
 	return &Miner{
 		api: api,
 

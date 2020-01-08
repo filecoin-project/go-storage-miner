@@ -166,6 +166,10 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 		return
 	}
 
+	if m.UpdateMonitor != nil {
+		m.UpdateMonitor(update.newState)
+	}
+
 	/*
 
 		*   Empty
