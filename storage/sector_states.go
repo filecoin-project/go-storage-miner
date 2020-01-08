@@ -65,12 +65,7 @@ func (m *Miner) handleUnsealed(ctx context.Context, sector SectorInfo) *sectorUp
 		return sector.upd().fatal(err)
 	}
 
-	sbTicket := sectorbuilder.SealTicket{
-		BlockHeight: ticket.BlockHeight,
-	}
-	copy(sbTicket.TicketBytes[:], ticket.TicketBytes)
-
-	rspco, err := m.sb.SealPreCommit(sector.SectorID, sbTicket, sector.pieceInfos())
+	rspco, err := m.sb.SealPreCommit(sector.SectorID, ticket.SB(), sector.pieceInfos())
 	if err != nil {
 		return sector.upd().to(api.SealFailed).error(xerrors.Errorf("seal pre commit failed: %w", err))
 	}

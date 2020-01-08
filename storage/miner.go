@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"github.com/filecoin-project/filecoin-ffi"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/pkg/errors"
+	"io"
 
 	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/lotus/chain/address"
@@ -18,6 +20,16 @@ var log = logging.Logger("storageminer")
 
 const SectorStorePrefix = "/sectors"
 
+type SectorBuilderAPI interface {
+	SectorSize() uint64
+	SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
+	SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
+	RateLimit()
+	AddPiece(pieceSize uint64, sectorId uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
+	AcquireSectorId() (uint64, error)
+}
+
+
 type Miner struct {
 	api    NodeAPI
 	events *events.Events
@@ -27,7 +39,7 @@ type Miner struct {
 	worker address.Address
 
 	// Sealing
-	sb      *sectorbuilder.SectorBuilder
+	sb      SectorBuilderAPI
 	sectors *statestore.StateStore
 
 	sectorIncoming chan *SectorInfo
