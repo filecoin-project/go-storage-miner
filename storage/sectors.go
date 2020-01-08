@@ -8,9 +8,9 @@ import (
 
 	xerrors "golang.org/x/xerrors"
 
+	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/lib/padreader"
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 )
 
 const NonceIncrement = math.MaxUint64
@@ -166,8 +166,8 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 		return
 	}
 
-	if m.UpdateMonitor != nil {
-		m.UpdateMonitor(update.newState)
+	if m.OnSectorUpdated != nil {
+		m.OnSectorUpdated(update.id, update.newState)
 	}
 
 	/*

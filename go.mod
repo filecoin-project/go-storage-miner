@@ -3,6 +3,7 @@ module github.com/filecoin-project/go-storage-mining
 go 1.13
 
 require (
+	github.com/filecoin-project/filecoin-ffi v0.0.0-20191219131535-bb699517a590
 	github.com/filecoin-project/go-sectorbuilder v0.0.0-20191220220745-2216fe5dabfe
 	github.com/filecoin-project/lotus v0.1.5
 	github.com/ipfs/go-block-format v0.0.2

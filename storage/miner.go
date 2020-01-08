@@ -2,14 +2,15 @@ package storage
 
 import (
 	"context"
-	"github.com/filecoin-project/filecoin-ffi"
+	"io"
+
+	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/pkg/errors"
-	"io"
 
 	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/lotus/chain/address"
@@ -30,7 +31,6 @@ type SectorBuilderAPI interface {
 	AcquireSectorId() (uint64, error)
 }
 
-
 type Miner struct {
 	api    NodeAPI
 	events *events.Events
@@ -43,7 +43,9 @@ type Miner struct {
 	sb      SectorBuilderAPI
 	sectors *statestore.StateStore
 
-	UpdateMonitor func(api.SectorState)
+	// OnSectorUpdated is called each time a sector transitions from one state
+	// to some other state, if defined.
+	OnSectorUpdated func(uint64, api.SectorState)
 
 	sectorIncoming chan *SectorInfo
 	sectorUpdated  chan sectorUpdate
@@ -55,7 +57,7 @@ func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, 
 	return &Miner{
 		api: api,
 
-		sb:    sb,
+		sb: sb,
 
 		sectors: statestore.New(namespace.Wrap(ds, datastore.NewKey(SectorStorePrefix))),
 
