@@ -11,10 +11,12 @@ require (
 	github.com/ipfs/go-ipfs-blockstore v0.1.1
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-files v0.0.4
+	github.com/ipfs/go-ipld-cbor v0.0.3
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v1.0.0
 	github.com/ipfs/go-unixfs v0.2.2-0.20190827150610-868af2e9e5cb
 	github.com/libp2p/go-libp2p-core v0.2.4
+	github.com/multiformats/go-multihash v0.0.10
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20191216205031-b047b6acb3c0
