@@ -2,14 +2,9 @@ package storage
 
 import (
 	"context"
+
 	"github.com/ipfs/go-cid"
 )
-
-type SealProof [32]byte
-type UnpaddedPieceBytes uint64
-type PaddedPieceBytes uint64
-type SectorId uint64
-type DealId uint64
 
 type NodeAPI interface {
 	// SendSelfDeals publishes storage deals using the provided inputs and
@@ -21,13 +16,13 @@ type NodeAPI interface {
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
-	SendPreCommitSector(context.Context, SectorId, SealTicket, ...Piece) (cid.Cid, error)
+	SendPreCommitSector(context.Context, uint64, SealTicket, ...Piece) (cid.Cid, error)
 
 	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, error)
 
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
-	SendProveCommitSector(context.Context, SectorId, SealProof, ...DealId) (cid.Cid, error)
+	SendProveCommitSector(context.Context, uint64, []byte, ...uint64) (cid.Cid, error)
 
 	WaitForProveCommitSector(context.Context, cid.Cid) (uint64, error)
 
@@ -42,11 +37,6 @@ type NodeAPI interface {
 }
 
 type PieceInfo struct {
-	Size  UnpaddedPieceBytes
+	Size  uint64
 	CommP [32]byte
-}
-
-type MsgProcessedInfo struct {
-	Height   uint64
-	ExitCode uint8 // TODO: should we replace this with an opaque string or `error`?
 }

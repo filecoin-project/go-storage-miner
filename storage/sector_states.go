@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-sectorbuilder"
@@ -81,7 +82,7 @@ func (m *Miner) handleUnsealed(ctx context.Context, sector SectorInfo) *sectorUp
 }
 
 func (m *Miner) handlePreCommitting(ctx context.Context, sector SectorInfo) *sectorUpdate {
-	mcid, err := m.api.SendPreCommitSector(ctx, SectorId(sector.SectorID), sector.Ticket, sector.Pieces...)
+	mcid, err := m.api.SendPreCommitSector(ctx, sector.SectorID, sector.Ticket, sector.Pieces...)
 	if err != nil {
 		return sector.upd().to(api.PreCommitFailed).error(err)
 	}
@@ -115,15 +116,7 @@ func (m *Miner) handleCommitting(ctx context.Context, sector SectorInfo) *sector
 		return sector.upd().to(api.SealCommitFailed).error(xerrors.Errorf("computing seal proof failed: %w", err))
 	}
 
-	var sealProof SealProof
-	copy(sealProof[:], proof)
-
-	dealIds := make([]DealId, len(sector.deals()))
-	for i, id := range sector.deals() {
-		dealIds[i] = DealId(id)
-	}
-
-	mcid, err := m.api.SendProveCommitSector(ctx, SectorId(sector.SectorID), sealProof, dealIds...)
+	mcid, err := m.api.SendProveCommitSector(ctx, sector.SectorID, proof, sector.deals()...)
 	if err != nil {
 		return sector.upd().to(api.CommitFailed).error(xerrors.Errorf("sending commit message: %w", err))
 	}
@@ -148,4 +141,3 @@ func (m *Miner) handleCommitWait(ctx context.Context, sector SectorInfo) *sector
 	return sector.upd().to(api.Proving).state(func(info *SectorInfo) {
 	})
 }
-

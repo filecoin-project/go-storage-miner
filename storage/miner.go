@@ -9,42 +9,38 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/pkg/errors"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-sectorbuilder"
-	"github.com/filecoin-project/lotus/chain/address"
-	"github.com/filecoin-project/lotus/chain/events"
-	"github.com/filecoin-project/lotus/lib/statestore"
+	"github.com/filecoin-project/go-statestore"
 )
 
 var log = logging.Logger("storageminer")
 
 const SectorStorePrefix = "/sectors"
 
+//nolint:golint
 type SectorBuilderAPI interface {
 	SectorSize() uint64
 	SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
 	SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
 	RateLimit() func()
-	AddPiece(pieceSize uint64, sectorId uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
+	AddPiece(pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
 	AcquireSectorId() (uint64, error)
 }
 
 type Miner struct {
-	api    NodeAPI
-	events *events.Events
-	h      host.Host
+	api NodeAPI
 
 	maddr  address.Address
 	worker address.Address
 
-	// Sealing
 	sb      SectorBuilderAPI
 	sectors *statestore.StateStore
 
 	// OnSectorUpdated is called each time a sector transitions from one state
-	// to some other state, if defined.
+	// to some other state, if defined. It is non-nil during test.
 	OnSectorUpdated func(uint64, api.SectorState)
 
 	sectorIncoming chan *SectorInfo
@@ -71,7 +67,7 @@ func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, 
 func (m *Miner) Run(ctx context.Context) error {
 	if err := m.sectorStateLoop(ctx); err != nil {
 		log.Errorf("%+v", err)
-		return errors.Errorf("failed to startup sector state loop: %w", err)
+		return errors.Errorf("failed to start sector state loop: %s", err)
 	}
 
 	return nil

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"context"
+
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-sectorbuilder"
@@ -26,7 +27,7 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 		}
 
 		pieces[i] = PieceInfo{
-			Size: UnpaddedPieceBytes(size),
+			Size:  size,
 			CommP: commP,
 		}
 	}
