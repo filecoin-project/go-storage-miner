@@ -100,6 +100,16 @@ jobs:
           name: Install pkg-config
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config
       - run: go version
+      - run:
+          name: Install Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - run:
+          name: Install jq
+          command: |
+            mkdir $HOME/.bin
+            curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output $HOME/.bin/jq
+            chmod +x $HOME/.bin/jq
       - restore_cache:
           name: restore go mod and cargo cache
           key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-storage-mining/go.sum" }}
@@ -107,6 +117,12 @@ jobs:
       - go/mod-download
       - run:
           command: make
+      - save_cache:
+          name: save cargo cache
+          key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-sectorbuilder/go.sum" }}
+          paths:
+            - "~/.rustup"
+            - "~/.cargo"
 
   lint:
     description: |
