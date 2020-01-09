@@ -243,8 +243,8 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 func (m *Miner) AllocatePiece(size uint64) (sectorID uint64, offset uint64, err error) {
 	// TODO: padreader.PaddedSize(1016) == 1016, which seems like a bug to me
 	//       due to the fact that GetMaxUserBytesPerStagedSector(1024) == 1016.
-	//		 Perhaps this is a naming issue? I would expect
-	//		 padreader.PaddedSize(1016) == 1024. I'll leave the code commented
+	//       Perhaps this is a naming issue? I would expect
+	//       padreader.PaddedSize(1016) == 1024. I'll leave the code commented
 	//       out, for now.
 	//
 	//       - esh 20200108
