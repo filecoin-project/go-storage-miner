@@ -1,18 +1,14 @@
 package storage
 
 import (
-	"bytes"
-	"context"
 	"io"
-	"math"
 	"math/rand"
+
+	"context"
 
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/chain/actors"
-	"github.com/filecoin-project/lotus/chain/types"
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/go-sectorbuilder"
 )
 
 func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPieceSizes []uint64, sizes ...uint64) ([]Piece, error) {
@@ -20,7 +16,7 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 		return nil, nil
 	}
 
-	deals := make([]actors.StorageDealProposal, len(sizes))
+	pieces := make([]PieceInfo, len(sizes))
 	for i, size := range sizes {
 		release := m.sb.RateLimit()
 		commP, err := sectorbuilder.GeneratePieceCommitment(io.LimitReader(rand.New(rand.NewSource(42)), int64(size)), size)
@@ -30,56 +26,23 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 			return nil, err
 		}
 
-		sdp := actors.StorageDealProposal{
-			PieceRef:             commP[:],
-			PieceSize:            size,
-			Client:               m.worker,
-			Provider:             m.maddr,
-			ProposalExpiration:   math.MaxUint64,
-			Duration:             math.MaxUint64 / 2, // /2 because overflows
-			StoragePricePerEpoch: types.NewInt(0),
-			StorageCollateral:    types.NewInt(0),
-			ProposerSignature:    nil,
+		pieces[i] = PieceInfo{
+			Size:  size,
+			CommP: commP,
 		}
-
-		if err := api.SignWith(ctx, m.api.WalletSign, m.worker, &sdp); err != nil {
-			return nil, xerrors.Errorf("signing storage deal failed: ", err)
-		}
-
-		deals[i] = sdp
 	}
 
-	params, aerr := actors.SerializeParams(&actors.PublishStorageDealsParams{
-		Deals: deals,
-	})
-	if aerr != nil {
-		return nil, xerrors.Errorf("serializing PublishStorageDeals params failed: ", aerr)
-	}
-
-	smsg, err := m.api.MpoolPushMessage(ctx, &types.Message{
-		To:       actors.StorageMarketAddress,
-		From:     m.worker,
-		Value:    types.NewInt(0),
-		GasPrice: types.NewInt(0),
-		GasLimit: types.NewInt(1000000),
-		Method:   actors.SMAMethods.PublishStorageDeals,
-		Params:   params,
-	})
+	mcid, err := m.api.SendSelfDeals(ctx, pieces...)
 	if err != nil {
 		return nil, err
 	}
-	r, err := m.api.StateWaitMsg(ctx, smsg.Cid())
+
+	dealIDs, err := m.api.WaitForSelfDeals(ctx, mcid)
 	if err != nil {
 		return nil, err
 	}
-	if r.Receipt.ExitCode != 0 {
-		log.Error(xerrors.Errorf("publishing deal failed: exit %d", r.Receipt.ExitCode))
-	}
-	var resp actors.PublishStorageDealResponse
-	if err := resp.UnmarshalCBOR(bytes.NewReader(r.Receipt.Return)); err != nil {
-		return nil, err
-	}
-	if len(resp.DealIDs) != len(sizes) {
+
+	if len(dealIDs) != len(sizes) {
 		return nil, xerrors.New("got unexpected number of DealIDs from PublishStorageDeals")
 	}
 
@@ -94,7 +57,7 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 		existingPieceSizes = append(existingPieceSizes, size)
 
 		out[i] = Piece{
-			DealID: resp.DealIDs[i],
+			DealID: dealIDs[i],
 			Size:   ppi.Size,
 			CommP:  ppi.CommP[:],
 		}

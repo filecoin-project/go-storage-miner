@@ -1,15 +1,10 @@
 package storage
 
 import (
-	"context"
-
 	"github.com/ipfs/go-cid"
 
-	"github.com/filecoin-project/lotus/api"
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/go-sectorbuilder"
 )
-
-type TicketFn func(context.Context) (*sectorbuilder.SealTicket, error)
 
 type SealTicket struct {
 	BlockHeight uint64
@@ -47,7 +42,7 @@ func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo) {
 }
 
 type SectorInfo struct {
-	State    api.SectorState
+	State    SectorState
 	SectorID uint64
 	Nonce    uint64
 
