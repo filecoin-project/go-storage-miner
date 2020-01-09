@@ -1,4 +1,4 @@
-module github.com/filecoin-project/go-storage-mining
+module github.com/filecoin-project/go-storage-miner
 
 go 1.13
 
