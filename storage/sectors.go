@@ -248,9 +248,9 @@ func (m *Miner) AllocatePiece(size uint64) (sectorID uint64, offset uint64, err 
 	//       out, for now.
 	//
 	//       - esh 20200108
-
+	//
 	//if padreader.PaddedSize(size) != size {
-	//	return 0, 0, xerrors.Errorf("size (%d) must be a quantity of unpadded ")
+	//	return 0, 0, xerrors.Errorf("cannot allocate unpadded piece")
 	//}
 
 	sid, err := m.sb.AcquireSectorId() // TODO: Put more than one thing in a sector
