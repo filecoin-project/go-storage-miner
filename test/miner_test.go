@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 
-	"github.com/filecoin-project/go-storage-mining/storage"
+	"github.com/filecoin-project/go-storage-miner/storage"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

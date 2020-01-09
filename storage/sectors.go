@@ -9,7 +9,7 @@ import (
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	xerrors "golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-storage-mining/lib/padreader"
+	"github.com/filecoin-project/go-storage-miner/lib/padreader"
 )
 
 const NonceIncrement = math.MaxUint64
