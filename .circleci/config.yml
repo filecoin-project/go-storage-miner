@@ -118,7 +118,7 @@ jobs:
           command: make
       - save_cache:
           name: save cargo cache
-          key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-sectorbuilder/go.sum" }}
+          key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-storage-miner/go.sum" }}
           paths:
             - "~/.rustup"
             - "~/.cargo"
