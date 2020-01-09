@@ -4,7 +4,6 @@ import (
 	"github.com/ipfs/go-cid"
 
 	"github.com/filecoin-project/go-sectorbuilder"
-	"github.com/filecoin-project/lotus/api"
 )
 
 type SealTicket struct {
@@ -43,7 +42,7 @@ func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo) {
 }
 
 type SectorInfo struct {
-	State    api.SectorState
+	State    SectorState
 	SectorID uint64
 	Nonce    uint64
 

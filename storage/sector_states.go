@@ -6,8 +6,51 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-sectorbuilder"
-	"github.com/filecoin-project/lotus/api"
 )
+
+// SectorState enumerates the states which a sector can be in as it progresses
+// from newly-provisioned, through packing, to sealed-and-proven.
+type SectorState = uint64
+
+const (
+	UndefinedSectorState SectorState = iota
+
+	Empty   // TODO: Is this useful
+	Packing // sector not in sealStore, and not on chain
+
+	Unsealed      // sealing / queued
+	PreCommitting // on chain pre-commit
+	PreCommitted  // waiting for seed
+	Committing
+	CommitWait // waiting for message to land on chain
+	Proving
+
+	SealFailed
+	PreCommitFailed
+	SealCommitFailed
+	CommitFailed
+
+	FailedUnrecoverable
+)
+
+var SectorStates = []string{
+	UndefinedSectorState: "UndefinedSectorState",
+	Empty:                "Empty",
+	Packing:              "Packing",
+	Unsealed:             "Unsealed",
+	PreCommitting:        "PreCommitting",
+	PreCommitted:         "PreCommitted",
+	Committing:           "Committing",
+	CommitWait:           "CommitWait",
+	Proving:              "Proving",
+
+	SealFailed:       "SealFailed",
+	PreCommitFailed:  "PreCommitFailed",
+	SealCommitFailed: "SealCommitFailed",
+	CommitFailed:     "CommitFailed",
+
+	FailedUnrecoverable: "FailedUnrecoverable",
+}
 
 type providerHandlerFunc func(ctx context.Context, deal SectorInfo) *sectorUpdate
 
@@ -54,7 +97,7 @@ func (m *Miner) handlePacking(ctx context.Context, sector SectorInfo) *sectorUpd
 		return sector.upd().fatal(xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err))
 	}
 
-	return sector.upd().to(api.Unsealed).state(func(info *SectorInfo) {
+	return sector.upd().to(Unsealed).state(func(info *SectorInfo) {
 		info.Pieces = append(info.Pieces, pieces...)
 	})
 }
@@ -68,10 +111,10 @@ func (m *Miner) handleUnsealed(ctx context.Context, sector SectorInfo) *sectorUp
 
 	rspco, err := m.sb.SealPreCommit(sector.SectorID, ticket.SB(), sector.pieceInfos())
 	if err != nil {
-		return sector.upd().to(api.SealFailed).error(xerrors.Errorf("seal pre commit failed: %w", err))
+		return sector.upd().to(SealFailed).error(xerrors.Errorf("seal pre commit failed: %w", err))
 	}
 
-	return sector.upd().to(api.PreCommitting).state(func(info *SectorInfo) {
+	return sector.upd().to(PreCommitting).state(func(info *SectorInfo) {
 		info.CommD = rspco.CommD[:]
 		info.CommR = rspco.CommR[:]
 		info.Ticket = SealTicket{
@@ -84,10 +127,10 @@ func (m *Miner) handleUnsealed(ctx context.Context, sector SectorInfo) *sectorUp
 func (m *Miner) handlePreCommitting(ctx context.Context, sector SectorInfo) *sectorUpdate {
 	mcid, err := m.api.SendPreCommitSector(ctx, sector.SectorID, sector.Ticket, sector.Pieces...)
 	if err != nil {
-		return sector.upd().to(api.PreCommitFailed).error(err)
+		return sector.upd().to(PreCommitFailed).error(err)
 	}
 
-	return sector.upd().to(api.PreCommitted).state(func(info *SectorInfo) {
+	return sector.upd().to(PreCommitted).state(func(info *SectorInfo) {
 		info.PreCommitMessage = &mcid
 	})
 }
@@ -96,7 +139,7 @@ func (m *Miner) handlePreCommitted(ctx context.Context, sector SectorInfo) *sect
 	updateNonce := sector.Nonce
 
 	m.api.SetSealSeedHandler(ctx, *sector.PreCommitMessage, func(seed SealSeed) {
-		m.sectorUpdated <- *sector.upd().to(api.Committing).setNonce(updateNonce).state(func(info *SectorInfo) {
+		m.sectorUpdated <- *sector.upd().to(Committing).setNonce(updateNonce).state(func(info *SectorInfo) {
 			info.Seed = seed
 		})
 
@@ -113,15 +156,15 @@ func (m *Miner) handleCommitting(ctx context.Context, sector SectorInfo) *sector
 
 	proof, err := m.sb.SealCommit(sector.SectorID, sector.Ticket.SB(), sector.Seed.SB(), sector.pieceInfos(), sector.rspco())
 	if err != nil {
-		return sector.upd().to(api.SealCommitFailed).error(xerrors.Errorf("computing seal proof failed: %w", err))
+		return sector.upd().to(SealCommitFailed).error(xerrors.Errorf("computing seal proof failed: %w", err))
 	}
 
 	mcid, err := m.api.SendProveCommitSector(ctx, sector.SectorID, proof, sector.deals()...)
 	if err != nil {
-		return sector.upd().to(api.CommitFailed).error(xerrors.Errorf("sending commit message: %w", err))
+		return sector.upd().to(CommitFailed).error(xerrors.Errorf("sending commit message: %w", err))
 	}
 
-	return sector.upd().to(api.CommitWait).state(func(info *SectorInfo) {
+	return sector.upd().to(CommitWait).state(func(info *SectorInfo) {
 		info.CommitMessage = &mcid
 		info.Proof = proof
 	})
@@ -130,14 +173,14 @@ func (m *Miner) handleCommitting(ctx context.Context, sector SectorInfo) *sector
 func (m *Miner) handleCommitWait(ctx context.Context, sector SectorInfo) *sectorUpdate {
 	if sector.CommitMessage == nil {
 		log.Errorf("sector %d entered commit wait state without a message cid", sector.SectorID)
-		return sector.upd().to(api.CommitFailed).error(xerrors.Errorf("entered commit wait with no commit cid"))
+		return sector.upd().to(CommitFailed).error(xerrors.Errorf("entered commit wait with no commit cid"))
 	}
 
 	_, err := m.api.WaitForProveCommitSector(ctx, *sector.CommitMessage)
 	if err != nil {
-		return sector.upd().to(api.CommitFailed).error(err)
+		return sector.upd().to(CommitFailed).error(err)
 	}
 
-	return sector.upd().to(api.Proving).state(func(info *SectorInfo) {
+	return sector.upd().to(Proving).state(func(info *SectorInfo) {
 	})
 }

@@ -16,13 +16,13 @@ type NodeAPI interface {
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
-	SendPreCommitSector(context.Context, uint64, SealTicket, ...Piece) (cid.Cid, error)
+	SendPreCommitSector(ctx context.Context, sectorID uint64, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
 
 	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, error)
 
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
-	SendProveCommitSector(context.Context, uint64, []byte, ...uint64) (cid.Cid, error)
+	SendProveCommitSector(ctx context.Context, sectorID uint64, proof []byte, dealids ...uint64) (cid.Cid, error)
 
 	WaitForProveCommitSector(context.Context, cid.Cid) (uint64, error)
 
@@ -33,7 +33,7 @@ type NodeAPI interface {
 	// SetSealSeedHandler sets the seal seed handler associated with the
 	// provided pre-commit message. Any handler previously associated with the
 	// provided pre-commit message is replaced.
-	SetSealSeedHandler(context.Context, cid.Cid, func(SealSeed), func())
+	SetSealSeedHandler(ctx context.Context, preCommitMsg cid.Cid, seedAvailFunc func(SealSeed), seedInvalidatedFunc func())
 }
 
 type PieceInfo struct {

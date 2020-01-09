@@ -9,14 +9,12 @@ import (
 	xerrors "golang.org/x/xerrors"
 
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
-	"github.com/filecoin-project/lotus/api"
-	"github.com/filecoin-project/lotus/lib/padreader"
 )
 
 const NonceIncrement = math.MaxUint64
 
 type sectorUpdate struct {
-	newState api.SectorState
+	newState SectorState
 	id       uint64
 	err      error
 	nonce    uint64
@@ -24,7 +22,7 @@ type sectorUpdate struct {
 }
 
 func (u *sectorUpdate) fatal(err error) *sectorUpdate {
-	u.newState = api.FailedUnrecoverable
+	u.newState = FailedUnrecoverable
 	u.err = err
 	return u
 }
@@ -39,7 +37,7 @@ func (u *sectorUpdate) state(m func(*SectorInfo)) *sectorUpdate {
 	return u
 }
 
-func (u *sectorUpdate) to(newState api.SectorState) *sectorUpdate {
+func (u *sectorUpdate) to(newState SectorState) *sectorUpdate {
 	u.newState = newState
 	return u
 }
@@ -49,7 +47,7 @@ func (u *sectorUpdate) setNonce(nc uint64) *sectorUpdate {
 	return u
 }
 
-func (m *Miner) UpdateSectorState(ctx context.Context, sector uint64, snonce uint64, state api.SectorState) error {
+func (m *Miner) UpdateSectorState(ctx context.Context, sector uint64, snonce uint64, state SectorState) error {
 	select {
 	case m.sectorUpdated <- sectorUpdate{
 		newState: state,
@@ -122,7 +120,7 @@ func (m *Miner) onSectorIncoming(sector *SectorInfo) {
 	go func() {
 		select {
 		case m.sectorUpdated <- sectorUpdate{
-			newState: api.Packing,
+			newState: Packing,
 			id:       sector.SectorID,
 		}:
 		case <-m.stop:
@@ -132,7 +130,7 @@ func (m *Miner) onSectorIncoming(sector *SectorInfo) {
 }
 
 func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
-	log.Infof("Sector %d updated state to %s", update.id, api.SectorStates[update.newState])
+	log.Infof("Sector %d updated state to %s", update.id, SectorStates[update.newState])
 	var sector SectorInfo
 	err := m.sectors.Mutate(update.id, func(s *SectorInfo) error {
 		if update.nonce < s.Nonce {
@@ -149,7 +147,7 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 			if s.LastErr != "" {
 				s.LastErr += "---------\n\n"
 			}
-			s.LastErr += fmt.Sprintf("entering state %s: %+v", api.SectorStates[update.newState], update.err)
+			s.LastErr += fmt.Sprintf("entering state %s: %+v", SectorStates[update.newState], update.err)
 		}
 
 		if update.mut != nil {
@@ -206,36 +204,36 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 
 	switch update.newState {
 	// Happy path
-	case api.Packing:
+	case Packing:
 		m.handleSectorUpdate(ctx, sector, m.handlePacking)
-	case api.Unsealed:
+	case Unsealed:
 		m.handleSectorUpdate(ctx, sector, m.handleUnsealed)
-	case api.PreCommitting:
+	case PreCommitting:
 		m.handleSectorUpdate(ctx, sector, m.handlePreCommitting)
-	case api.PreCommitted:
+	case PreCommitted:
 		m.handleSectorUpdate(ctx, sector, m.handlePreCommitted)
-	case api.Committing:
+	case Committing:
 		m.handleSectorUpdate(ctx, sector, m.handleCommitting)
-	case api.CommitWait:
+	case CommitWait:
 		m.handleSectorUpdate(ctx, sector, m.handleCommitWait)
-	case api.Proving:
+	case Proving:
 		// TODO: track sector health / expiration
 		log.Infof("Proving sector %d", update.id)
 
 	// Handled failure modes
-	case api.SealFailed:
+	case SealFailed:
 		log.Warnf("sector %d entered unimplemented state 'SealFailed'", update.id)
-	case api.PreCommitFailed:
+	case PreCommitFailed:
 		log.Warnf("sector %d entered unimplemented state 'PreCommitFailed'", update.id)
-	case api.SealCommitFailed:
+	case SealCommitFailed:
 		log.Warnf("sector %d entered unimplemented state 'SealCommitFailed'", update.id)
-	case api.CommitFailed:
+	case CommitFailed:
 		log.Warnf("sector %d entered unimplemented state 'CommitFailed'", update.id)
 
 	// Fatal errors
-	case api.UndefinedSectorState:
+	case UndefinedSectorState:
 		log.Error("sector update with undefined state!")
-	case api.FailedUnrecoverable:
+	case FailedUnrecoverable:
 		log.Errorf("sector %d failed unrecoverably", update.id)
 	default:
 		log.Errorf("unexpected sector update state: %d", update.newState)
@@ -243,9 +241,17 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 }
 
 func (m *Miner) AllocatePiece(size uint64) (sectorID uint64, offset uint64, err error) {
-	if padreader.PaddedSize(size) != size {
-		return 0, 0, xerrors.Errorf("cannot allocate unpadded piece")
-	}
+	// TODO: padreader.PaddedSize(1016) == 1016, which seems like a bug to me
+	//       due to the fact that GetMaxUserBytesPerStagedSector(1024) == 1016.
+	//		 Perhaps this is a naming issue? I would expect
+	//		 padreader.PaddedSize(1016) == 1024. I'll leave the code commented
+	//       out, for now.
+	//
+	//       - esh 20200108
+
+	//if padreader.PaddedSize(size) != size {
+	//	return 0, 0, xerrors.Errorf("size (%d) must be a quantity of unpadded ")
+	//}
 
 	sid, err := m.sb.AcquireSectorId() // TODO: Put more than one thing in a sector
 	if err != nil {

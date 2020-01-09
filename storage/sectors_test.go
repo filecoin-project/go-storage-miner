@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"gotest.tools/assert"
+	cborutil "github.com/filecoin-project/go-cbor-util"
 
-	"github.com/filecoin-project/lotus/lib/cborutil"
+	"gotest.tools/assert"
 )
 
 func TestSectorInfoSelialization(t *testing.T) {

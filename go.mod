@@ -5,14 +5,14 @@ go 1.13
 require (
 	github.com/filecoin-project/filecoin-ffi v0.0.0-20191219131535-bb699517a590
 	github.com/filecoin-project/go-address v0.0.0-20191219011437-af739c490b4f
+	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
 	github.com/filecoin-project/go-sectorbuilder v0.0.0-20191220220745-2216fe5dabfe
 	github.com/filecoin-project/go-statestore v0.0.0-20200102200712-1f63c701c1e5
-	github.com/filecoin-project/lotus v0.1.5
+	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-datastore v0.1.1
 	github.com/ipfs/go-ipld-cbor v0.0.3
 	github.com/ipfs/go-log v1.0.0
-	github.com/libp2p/go-libp2p-core v0.2.4
 	github.com/multiformats/go-multihash v0.0.10
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0

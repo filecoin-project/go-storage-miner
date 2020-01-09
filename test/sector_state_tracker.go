@@ -4,43 +4,44 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/filecoin-project/lotus/api"
+	"github.com/filecoin-project/go-storage-mining/storage"
+
 	"gotest.tools/assert"
 )
 
 type sectorStateTracker struct {
-	actualSequence   []api.SectorState
-	expectedSequence []api.SectorState
+	actualSequence   []storage.SectorState
+	expectedSequence []storage.SectorState
 	sectorID         uint64
 	t                *testing.T
 }
 
-func begin(t *testing.T, sectorID uint64, initialState api.SectorState) *sectorStateTracker {
+func begin(t *testing.T, sectorID uint64, initialState storage.SectorState) *sectorStateTracker {
 	return &sectorStateTracker{
-		actualSequence:   []api.SectorState{},
-		expectedSequence: []api.SectorState{initialState},
+		actualSequence:   []storage.SectorState{},
+		expectedSequence: []storage.SectorState{initialState},
 		sectorID:         sectorID,
 		t:                t,
 	}
 }
 
-func (f *sectorStateTracker) then(s api.SectorState) *sectorStateTracker {
+func (f *sectorStateTracker) then(s storage.SectorState) *sectorStateTracker {
 	f.expectedSequence = append(f.expectedSequence, s)
 	return f
 }
 
-func (f *sectorStateTracker) end() (func(uint64, api.SectorState), func() string, <-chan struct{}) {
+func (f *sectorStateTracker) end() (func(uint64, storage.SectorState), func() string, <-chan struct{}) {
 	var indx int
-	var last api.SectorState
+	var last storage.SectorState
 	done := make(chan struct{})
 
-	next := func(sectorID uint64, curr api.SectorState) {
+	next := func(sectorID uint64, curr storage.SectorState) {
 		if sectorID != f.sectorID {
 			return
 		}
 
 		if indx < len(f.expectedSequence) {
-			assert.Equal(f.t, f.expectedSequence[indx], curr, "unexpected transition from %s to %s (expected transition to %s)", api.SectorStates[last], api.SectorStates[curr], api.SectorStates[f.expectedSequence[indx]])
+			assert.Equal(f.t, f.expectedSequence[indx], curr, "unexpected transition from %s to %s (expected transition to %s)", storage.SectorStates[last], storage.SectorStates[curr], storage.SectorStates[f.expectedSequence[indx]])
 		}
 
 		last = curr
@@ -58,12 +59,12 @@ func (f *sectorStateTracker) end() (func(uint64, api.SectorState), func() string
 	status := func() string {
 		expected := make([]string, len(f.expectedSequence))
 		for i, s := range f.expectedSequence {
-			expected[i] = api.SectorStates[s]
+			expected[i] = storage.SectorStates[s]
 		}
 
 		actual := make([]string, len(f.actualSequence))
 		for i, s := range f.actualSequence {
-			actual[i] = api.SectorStates[s]
+			actual[i] = storage.SectorStates[s]
 		}
 
 		return fmt.Sprintf("expected transitions: %+v, actual transitions: %+v", expected, actual)

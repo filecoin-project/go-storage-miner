@@ -5,7 +5,6 @@ import (
 	"io"
 
 	ffi "github.com/filecoin-project/filecoin-ffi"
-	"github.com/filecoin-project/lotus/api"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	logging "github.com/ipfs/go-log"
@@ -41,7 +40,7 @@ type Miner struct {
 
 	// OnSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
-	OnSectorUpdated func(uint64, api.SectorState)
+	OnSectorUpdated func(uint64, SectorState)
 
 	sectorIncoming chan *SectorInfo
 	sectorUpdated  chan sectorUpdate
