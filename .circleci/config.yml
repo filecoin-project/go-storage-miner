@@ -102,7 +102,7 @@ jobs:
       - run: go version
       - restore_cache:
           name: restore go mod and cargo cache
-          key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-sectorbuilder/go.sum" }}
+          key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-storage-mining/go.sum" }}
       - install-deps
       - go/mod-download
       - run:
