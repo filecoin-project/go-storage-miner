@@ -8,18 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 
 	"github.com/filecoin-project/go-storage-mining/storage"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const DefaultDealId = 42
-const DefaultSectorId = 42
-const UserBytesOneKibSector = 1016 // also known as "unpadded" bytes
+const DefaultDealID = 42
+const DefaultSectorID = 42
+const UserBytesOneKiBSector = 1016 // also known as "unpadded" bytes
 const PaddedBytesOneKiBSector = 1024
 
 func TestSuccessfulPieceSealingFlow(t *testing.T) {
@@ -33,7 +33,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	}()
 
 	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorId, storage.Packing).
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
 		then(storage.PreCommitted).
@@ -49,7 +49,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	require.NoError(t, miner.Run(ctx))
 
 	// kick off the state machine
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKibSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKibSector)), DefaultSectorId, DefaultDealId))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
 	case <-doneCh:
@@ -112,7 +112,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, pieceSize, pieceReader, sectorID, DefaultDealId))
+	require.NoError(t, miner.SealPiece(ctx, pieceSize, pieceReader, sectorID, DefaultDealID))
 
 	select {
 	case <-doneCh:
@@ -146,7 +146,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	}()
 
 	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorId, storage.Packing).
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
 		then(storage.PreCommitFailed).
@@ -157,7 +157,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKibSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKibSector)), DefaultSectorId, DefaultDealId))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
 	case <-doneCh:
@@ -189,7 +189,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	}()
 
 	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorId, storage.Packing).
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
 		then(storage.PreCommitted).
@@ -202,7 +202,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKibSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKibSector)), DefaultSectorId, DefaultDealId))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
 	case <-doneCh:
@@ -234,7 +234,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	}()
 
 	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorId, storage.Packing).
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
 		then(storage.PreCommitted).
@@ -248,7 +248,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKibSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKibSector)), DefaultSectorId, DefaultDealId))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
 	case <-doneCh:
