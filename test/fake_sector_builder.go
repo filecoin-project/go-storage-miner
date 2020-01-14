@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"io"
 
 	ffi "github.com/filecoin-project/filecoin-ffi"
@@ -14,11 +13,11 @@ func (fakeSectorBuilder) SectorSize() uint64 {
 	return 1024
 }
 
-func (fakeSectorBuilder) SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error) {
+func (fakeSectorBuilder) SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error) {
 	return sectorbuilder.RawSealPreCommitOutput{}, nil
 }
 
-func (fakeSectorBuilder) SealCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error) {
+func (fakeSectorBuilder) SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error) {
 	return []byte{42}, nil
 }
 
