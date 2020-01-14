@@ -16,7 +16,7 @@ type NodeAPI interface {
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
-	SendPreCommitSector(ctx context.Context, sectorID uint64, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
+	SendPreCommitSector(ctx context.Context, sectorID uint64, commR []byte, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
 
 	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, error)
 
