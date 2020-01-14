@@ -12,19 +12,19 @@ type NodeAPI interface {
 	SendSelfDeals(context.Context, ...PieceInfo) (cid.Cid, error)
 
 	// WaitForSelfDeals blocks until a
-	WaitForSelfDeals(context.Context, cid.Cid) ([]uint64, error)
+	WaitForSelfDeals(context.Context, cid.Cid) ([]uint64, uint8, error)
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
 	SendPreCommitSector(ctx context.Context, sectorID uint64, commR []byte, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
 
-	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, error)
+	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, uint8, error)
 
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
 	SendProveCommitSector(ctx context.Context, sectorID uint64, proof []byte, dealids ...uint64) (cid.Cid, error)
 
-	WaitForProveCommitSector(context.Context, cid.Cid) (uint64, error)
+	WaitForProveCommitSector(context.Context, cid.Cid) (uint64, uint8, error)
 
 	// GetSealTicket produces a ticket from the chain to which the miner commits
 	// when they start encoding a sector.
