@@ -22,12 +22,14 @@ const SectorStorePrefix = "/sectors"
 //nolint:golint
 type SectorBuilderAPI interface {
 	SectorSize() uint64
-	SealPreCommit(sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
-	SealCommit(sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
+	SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
+	SealCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
 	RateLimit() func()
 	AddPiece(pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
 	AcquireSectorId() (uint64, error)
 }
+
+var _ SectorBuilderAPI = new(sectorbuilder.SectorBuilder)
 
 type Miner struct {
 	api NodeAPI
