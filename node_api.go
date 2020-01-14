@@ -30,9 +30,8 @@ type NodeAPI interface {
 	// when they start encoding a sector.
 	GetSealTicket(context.Context) (SealTicket, error)
 
-	// GetSealSeed sets the seal seed handler associated with the
-	// provided pre-commit message. Any handler previously associated with the
-	// provided pre-commit message is replaced.
+	// GetSealSeed requests that a seal seed be provided through the return channel the given block interval after the preCommitMsg arrives on chain.
+	// It expects to be notified through the invalidated channel if a re-org sets the chain back to before the height at the interval.
 	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (seed <-chan SealSeed, err <-chan error, invalidated <-chan struct{}, done <-chan struct{})
 }
 
