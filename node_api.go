@@ -30,10 +30,10 @@ type NodeAPI interface {
 	// when they start encoding a sector.
 	GetSealTicket(context.Context) (SealTicket, error)
 
-	// SetSealSeedHandler sets the seal seed handler associated with the
+	// GetSealSeed sets the seal seed handler associated with the
 	// provided pre-commit message. Any handler previously associated with the
 	// provided pre-commit message is replaced.
-	SetSealSeedHandler(ctx context.Context, preCommitMsg cid.Cid, seedAvailFunc func(SealSeed), seedInvalidatedFunc func())
+	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (seed <-chan SealSeed, err <-chan error, invalidated <-chan struct{}, done <-chan struct{})
 }
 
 type PieceInfo struct {

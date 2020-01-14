@@ -138,16 +138,26 @@ func (m *Miner) handlePreCommitting(ctx context.Context, sector SectorInfo) *sec
 func (m *Miner) handlePreCommitted(ctx context.Context, sector SectorInfo) *sectorUpdate {
 	updateNonce := sector.Nonce
 
-	m.api.SetSealSeedHandler(ctx, *sector.PreCommitMessage, func(seed SealSeed) {
-		m.sectorUpdated <- *sector.upd().to(Committing).setNonce(updateNonce).state(func(info *SectorInfo) {
-			info.Seed = seed
-		})
+	seedChan, errChan, invalidated, done := m.api.GetSealSeed(ctx, *sector.PreCommitMessage, InteractivePoRepDelay)
 
-		updateNonce++
-	}, func() {
-		log.Warn("revert in interactive commit sector step")
-	})
+	for {
+		select {
+		case seed := <-seedChan:
+			m.sectorUpdated <- *sector.upd().to(Committing).setNonce(updateNonce).state(func(info *SectorInfo) {
+				info.Seed = seed
+			})
 
+			updateNonce++
+		case err := <-errChan:
+			log.Error("error waiting for precommit", err)
+		case <-invalidated:
+			log.Warn("revert in interactive commit sector step")
+		case <-done:
+			return nil
+		case <-ctx.Done():
+			return nil
+		}
+	}
 	return nil
 }
 

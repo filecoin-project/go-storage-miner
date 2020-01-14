@@ -13,6 +13,7 @@ import (
 )
 
 const NonceIncrement = math.MaxUint64
+const InteractivePoRepDelay = 8
 
 type sectorUpdate struct {
 	newState SectorState

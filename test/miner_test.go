@@ -275,7 +275,7 @@ func TestHandlesCommitSectorMessageNeverIncludedInBlock(t *testing.T) {
 }
 
 func TestSealSeedInvalidated(t *testing.T) {
-	// SetSealSeedHandler called our "seed available" handler, and then some
+	// GetSealSeed called our "seed available" handler, and then some
 	// time later called our "seed invalidated" handler
 	t.Skip("the sector should go back to a PreCommitted state")
 }
