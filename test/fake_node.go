@@ -12,7 +12,7 @@ import (
 type fakeNode struct {
 	sendSelfDeals            func(context.Context, ...storage.PieceInfo) (cid.Cid, error)
 	waitForSelfDeals         func(context.Context, cid.Cid) (dealIds []uint64, err error)
-	sendPreCommitSector      func(ctx context.Context, sectorID uint64, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error)
+	sendPreCommitSector      func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error)
 	waitForPreCommitSector   func(context.Context, cid.Cid) (processedAtBlockHeight uint64, err error)
 	sendProveCommitSector    func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (processedAtBlockHeight uint64, err error)
@@ -28,7 +28,7 @@ func newFakeNode() *fakeNode {
 		waitForSelfDeals: func(context.Context, cid.Cid) (dealIds []uint64, err error) {
 			panic("by default, no self deals will be made")
 		},
-		sendPreCommitSector: func(ctx context.Context, sectorID uint64, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
+		sendPreCommitSector: func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
 			return createCidForTesting(42), nil
 		},
 		waitForPreCommitSector: func(context.Context, cid.Cid) (processedAtBlockHeight uint64, err error) {
@@ -65,8 +65,8 @@ func (f *fakeNode) WaitForSelfDeals(ctx context.Context, msg cid.Cid) (dealIds [
 	return f.waitForSelfDeals(ctx, msg)
 }
 
-func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorID uint64, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
-	return f.sendPreCommitSector(ctx, sectorID, ticket, pieces...)
+func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
+	return f.sendPreCommitSector(ctx, sectorID, commR, ticket, pieces...)
 }
 
 func (f *fakeNode) WaitForPreCommitSector(ctx context.Context, msg cid.Cid) (processedAtBlockHeight uint64, err error) {

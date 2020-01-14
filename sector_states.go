@@ -125,7 +125,7 @@ func (m *Miner) handleUnsealed(ctx context.Context, sector SectorInfo) *sectorUp
 }
 
 func (m *Miner) handlePreCommitting(ctx context.Context, sector SectorInfo) *sectorUpdate {
-	mcid, err := m.api.SendPreCommitSector(ctx, sector.SectorID, sector.Ticket, sector.Pieces...)
+	mcid, err := m.api.SendPreCommitSector(ctx, sector.SectorID, sector.CommR, sector.Ticket, sector.Pieces...)
 	if err != nil {
 		return sector.upd().to(PreCommitFailed).error(err)
 	}
