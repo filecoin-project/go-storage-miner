@@ -17,7 +17,7 @@ type fakeNode struct {
 	sendProveCommitSector    func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
-	setSealSeedHandler       func(ctx context.Context, msg cid.Cid, available func(storage.SealSeed), invalidated func())
+	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{})
 }
 
 func newFakeNode() *fakeNode {
@@ -46,13 +46,16 @@ func newFakeNode() *fakeNode {
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
-		setSealSeedHandler: func(ctx context.Context, msg cid.Cid, available func(storage.SealSeed), invalidated func()) {
+		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{}) {
+			seedChan := make(chan storage.SealSeed)
 			go func() {
-				available(storage.SealSeed{
+				seedChan <- storage.SealSeed{
 					BlockHeight: 42,
 					TicketBytes: []byte{5, 6, 7},
-				})
+				}
 			}()
+
+			return seedChan, make(chan error), make(chan struct{}), make(chan struct{})
 		},
 	}
 }
@@ -85,8 +88,8 @@ func (f *fakeNode) GetSealTicket(ctx context.Context) (storage.SealTicket, error
 	return f.getSealTicket(ctx)
 }
 
-func (f *fakeNode) SetSealSeedHandler(ctx context.Context, msg cid.Cid, available func(storage.SealSeed), invalidated func()) {
-	f.setSealSeedHandler(ctx, msg, available, invalidated)
+func (f *fakeNode) GetSealSeed(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{}) {
+	return f.getSealSeed(ctx, msg, interval)
 }
 
 func createCidForTesting(n int) cid.Cid {
