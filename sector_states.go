@@ -176,9 +176,14 @@ func (m *Miner) handleCommitWait(ctx context.Context, sector SectorInfo) *sector
 		return sector.upd().to(CommitFailed).error(xerrors.Errorf("entered commit wait with no commit cid"))
 	}
 
-	_, err := m.api.WaitForProveCommitSector(ctx, *sector.CommitMessage)
+	_, exitCode, err := m.api.WaitForProveCommitSector(ctx, *sector.CommitMessage)
 	if err != nil {
 		return sector.upd().to(CommitFailed).error(err)
+	}
+
+	if exitCode != 0 {
+		log.Errorf("UNHANDLED: submitting sector proof failed (exit=%d, msg=%s) (t:%x; s:%x(%d); p:%x)", exitCode, sector.CommitMessage, sector.Ticket.TicketBytes, sector.Seed.TicketBytes, sector.Seed.BlockHeight, sector.Proof)
+		return sector.upd().fatal(xerrors.Errorf("UNHANDLED: submitting sector proof failed (exit: %d)", exitCode))
 	}
 
 	return sector.upd().to(Proving).state(func(info *SectorInfo) {
