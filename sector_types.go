@@ -32,7 +32,7 @@ type Piece struct {
 	DealID uint64
 
 	Size  uint64
-	CommP []byte
+	CommP [32]byte
 }
 
 func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo) {
@@ -51,8 +51,8 @@ type SectorInfo struct {
 	Pieces []Piece
 
 	// PreCommit
-	CommD  []byte
-	CommR  []byte
+	CommD  [32]byte
+	CommR  [32]byte
 	Proof  []byte
 	Ticket SealTicket
 
@@ -102,8 +102,8 @@ func (t *SectorInfo) existingPieces() []uint64 {
 func (t *SectorInfo) rspco() sectorbuilder.RawSealPreCommitOutput {
 	var out sectorbuilder.RawSealPreCommitOutput
 
-	copy(out.CommD[:], t.CommD)
-	copy(out.CommR[:], t.CommR)
+	copy(out.CommD[:], t.CommD[:])
+	copy(out.CommR[:], t.CommR[:])
 
 	return out
 }
