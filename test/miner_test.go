@@ -77,8 +77,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			return createCidForTesting(42), nil
 		}
 
-		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []uint64, err error) {
-			return []uint64{42, 43}, nil
+		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []uint64, exitCode uint8, err error) {
+			return []uint64{42, 43}, 0, nil
 		}
 
 		return n
@@ -219,8 +219,8 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.waitForProveCommitSector = func(i context.Context, i2 cid.Cid) (uint64, error) {
-			return 0, errors.New("expected behavior")
+		n.waitForProveCommitSector = func(i context.Context, i2 cid.Cid) (uint64, uint8, error) {
+			return 0, 0, errors.New("expected behavior")
 		}
 
 		return n

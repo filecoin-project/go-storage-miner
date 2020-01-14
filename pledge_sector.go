@@ -37,13 +37,21 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 		return nil, err
 	}
 
-	dealIDs, err := m.api.WaitForSelfDeals(ctx, mcid)
+	dealIDs, exitCode, err := m.api.WaitForSelfDeals(ctx, mcid)
 	if err != nil {
 		return nil, err
 	}
 
+	if exitCode != 0 {
+		err := xerrors.Errorf("publishing deal failed: exit %d", exitCode)
+		log.Error(err)
+		return nil, err
+	}
+
 	if len(dealIDs) != len(sizes) {
-		return nil, xerrors.New("got unexpected number of DealIDs from PublishStorageDeals")
+		err := xerrors.New("got unexpected number of DealIDs from PublishStorageDeals")
+		log.Error(err)
+		return nil, err
 	}
 
 	out := make([]Piece, len(sizes))
