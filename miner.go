@@ -19,7 +19,9 @@ var log = logging.Logger("storageminer")
 
 const SectorStorePrefix = "/sectors"
 
-//nolint:golint
+// SectorBuilderAPI provides a method set used by the miner in order to interact
+// with the go-sectorbuilder package. This method set exposes a subset of the
+// methods defined on the sectorbuilder.Interface interface.
 type SectorBuilderAPI interface {
 	SectorSize() uint64
 	SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
