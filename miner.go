@@ -52,8 +52,6 @@ type Miner struct {
 	stopped        chan struct{}
 }
 
-var _ Interface = new(Miner)
-
 func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, error) {
 	return &Miner{
 		api: api,
