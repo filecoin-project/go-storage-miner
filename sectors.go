@@ -6,10 +6,10 @@ import (
 	"io"
 	"math"
 
+	"github.com/filecoin-project/go-storage-miner/lib/padreader"
+
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	xerrors "golang.org/x/xerrors"
-
-	"github.com/filecoin-project/go-storage-miner/lib/padreader"
 )
 
 const NonceIncrement = math.MaxUint64
@@ -242,22 +242,21 @@ func (m *Miner) onSectorUpdated(ctx context.Context, update sectorUpdate) {
 	}
 }
 
-func (m *Miner) AllocatePiece(size uint64) (sectorID uint64, offset uint64, err error) {
-	if padreader.PaddedSize(size) != size {
-		return 0, 0, xerrors.Errorf("cannot allocate unpadded piece")
-	}
-
-	sid, err := m.sb.AcquireSectorId() // TODO: Put more than one thing in a sector
+func (m *Miner) AllocateSectorID() (sectorID uint64, err error) {
+	sid, err := m.sb.AcquireSectorId()
 	if err != nil {
-		return 0, 0, xerrors.Errorf("acquiring sector ID: %w", err)
+		return 0, xerrors.Errorf("acquiring sector ID: %w", err)
 	}
 
-	// offset hard-coded to 0 since we only put one thing in a sector for now
-	return sid, 0, nil
+	return sid, nil
 }
 
 func (m *Miner) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorID uint64, dealID uint64) error {
 	log.Infof("Seal piece for deal %d", dealID)
+
+	if padreader.PaddedSize(size) != size {
+		return xerrors.Errorf("cannot seal unpadded piece")
+	}
 
 	ppi, err := m.sb.AddPiece(size, sectorID, r, []uint64{})
 	if err != nil {

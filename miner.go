@@ -52,6 +52,8 @@ type Miner struct {
 	stopped        chan struct{}
 }
 
+var _ Interface = new(Miner)
+
 func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, error) {
 	return &Miner{
 		api: api,
@@ -67,7 +69,7 @@ func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, 
 	}, nil
 }
 
-func (m *Miner) Run(ctx context.Context) error {
+func (m *Miner) Start(ctx context.Context) error {
 	if err := m.sectorStateLoop(ctx); err != nil {
 		log.Errorf("%+v", err)
 		return errors.Errorf("failed to start sector state loop: %s", err)
