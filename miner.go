@@ -19,7 +19,9 @@ var log = logging.Logger("storageminer")
 
 const SectorStorePrefix = "/sectors"
 
-//nolint:golint
+// SectorBuilderAPI provides a method set used by the miner in order to interact
+// with the go-sectorbuilder package. This method set exposes a subset of the
+// methods defined on the sectorbuilder.Interface interface.
 type SectorBuilderAPI interface {
 	SectorSize() uint64
 	SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
@@ -65,7 +67,7 @@ func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, 
 	}, nil
 }
 
-func (m *Miner) Run(ctx context.Context) error {
+func (m *Miner) Start(ctx context.Context) error {
 	if err := m.sectorStateLoop(ctx); err != nil {
 		log.Errorf("%+v", err)
 		return errors.Errorf("failed to start sector state loop: %s", err)
