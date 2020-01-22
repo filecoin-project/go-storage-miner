@@ -7,7 +7,7 @@ require (
 	github.com/filecoin-project/go-address v0.0.0-20191219011437-af739c490b4f
 	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
 	github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200114015900-4103afa82689
-	github.com/filecoin-project/go-statestore v0.0.0-20200102200712-1f63c701c1e5
+	github.com/filecoin-project/go-statestore v0.1.0
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-datastore v0.1.1
