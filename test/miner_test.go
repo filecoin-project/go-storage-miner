@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 
-	storage "github.com/filecoin-project/go-storage-miner"
+	"github.com/filecoin-project/go-storage-miner"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,25 +25,22 @@ const PaddedBytesOneKiBSector = 1024
 func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	ctx := context.Background()
 
-	miner, err := storage.NewMiner(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{})
-	require.NoError(t, err)
-
-	defer func() {
-		require.NoError(t, miner.Stop(ctx))
-	}()
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
-		then(storage.PreCommitted).
+		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
 		then(storage.Proving).
 		end()
 
-	// register our event handler
-	miner.OnSectorUpdated = onSectorUpdatedFunc
+	miner, err := storage.NewMinerForTesting(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, miner.Stop(ctx))
+	}()
 
 	// start the internal runloop
 	require.NoError(t, miner.Start(ctx))
@@ -84,7 +81,22 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		return n
 	}()
 
-	miner, err := storage.NewMiner(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{})
+	sb := &fakeSectorBuilder{}
+
+	// a sequence of sector state transitions we expect to observe
+	sectorID, err := sb.AcquireSectorId()
+	require.NoError(t, err)
+
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, sectorID, storage.Packing).
+		then(storage.Unsealed).
+		then(storage.PreCommitting).
+		then(storage.WaitSeed).
+		then(storage.Committing).
+		then(storage.CommitWait).
+		then(storage.Proving).
+		end()
+
+	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), sb, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -94,21 +106,6 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	// create a piece which fills up a quarter of the sector
 	pieceSize := uint64(1016 / 4)
 	pieceReader := io.LimitReader(rand.New(rand.NewSource(42)), int64(pieceSize))
-	sectorID, err := miner.AllocateSectorID()
-	require.NoError(t, err)
-
-	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, sectorID, storage.Packing).
-		then(storage.Unsealed).
-		then(storage.PreCommitting).
-		then(storage.PreCommitted).
-		then(storage.Committing).
-		then(storage.CommitWait).
-		then(storage.Proving).
-		end()
-
-	// register our event handler
-	miner.OnSectorUpdated = onSectorUpdatedFunc
 
 	// kick off state transitions
 	require.NoError(t, miner.Start(ctx))
@@ -138,13 +135,6 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		return n
 	}()
 
-	miner, err := storage.NewMiner(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{})
-	require.NoError(t, err)
-
-	defer func() {
-		require.NoError(t, miner.Stop(ctx))
-	}()
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
@@ -152,8 +142,12 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(storage.PreCommitFailed).
 		end()
 
-	// register our event handler
-	miner.OnSectorUpdated = onSectorUpdatedFunc
+	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, miner.Stop(ctx))
+	}()
 
 	// kick off state transitions
 	require.NoError(t, miner.Start(ctx))
@@ -181,24 +175,21 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		return n
 	}()
 
-	miner, err := storage.NewMiner(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{})
+	// a sequence of sector state transitions we expect to observe
+	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
+		then(storage.Unsealed).
+		then(storage.PreCommitting).
+		then(storage.WaitSeed).
+		then(storage.Committing).
+		then(storage.CommitFailed).
+		end()
+
+	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
 		require.NoError(t, miner.Stop(ctx))
 	}()
-
-	// a sequence of sector state transitions we expect to observe
-	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
-		then(storage.Unsealed).
-		then(storage.PreCommitting).
-		then(storage.PreCommitted).
-		then(storage.Committing).
-		then(storage.CommitFailed).
-		end()
-
-	// register our event handler
-	miner.OnSectorUpdated = onSectorUpdatedFunc
 
 	// kick off state transitions
 	require.NoError(t, miner.Start(ctx))
@@ -226,25 +217,22 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		return n
 	}()
 
-	miner, err := storage.NewMiner(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{})
-	require.NoError(t, err)
-
-	defer func() {
-		require.NoError(t, miner.Stop(ctx))
-	}()
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
 		then(storage.PreCommitting).
-		then(storage.PreCommitted).
+		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
 		then(storage.CommitFailed).
 		end()
 
-	// register our event handler
-	miner.OnSectorUpdated = onSectorUpdatedFunc
+	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, miner.Stop(ctx))
+	}()
 
 	// kick off state transitions
 	require.NoError(t, miner.Start(ctx))

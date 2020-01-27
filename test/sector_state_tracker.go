@@ -2,9 +2,8 @@ package test
 
 import (
 	"fmt"
+	"github.com/filecoin-project/go-storage-miner"
 	"testing"
-
-	storage "github.com/filecoin-project/go-storage-miner"
 
 	"gotest.tools/assert"
 )

@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-
 	"github.com/filecoin-project/go-storage-miner"
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -18,6 +17,11 @@ type fakeNode struct {
 	waitForProveCommitSector func(context.Context, cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{})
+	checkPieces              func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError
+	checkSealing             func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError
+	sendReportFaults         func(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error)
+	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
+	getReplicaCommitmentById func(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
 }
 
 func newFakeNode() *fakeNode {
@@ -57,6 +61,21 @@ func newFakeNode() *fakeNode {
 
 			return seedChan, make(chan error), make(chan struct{}), make(chan struct{})
 		},
+		checkPieces: func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError {
+			return nil
+		},
+		checkSealing: func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError {
+			return nil
+		},
+		sendReportFaults: func(ctx context.Context, sectorIDs ...uint64) (i cid.Cid, e error) {
+			return createCidForTesting(42), nil
+		},
+		waitForReportFaults: func(i context.Context, i2 cid.Cid) (u uint8, e error) {
+			return 0, nil
+		},
+		getReplicaCommitmentById: func(ctx context.Context, sectorID uint64) ([]byte, bool, error) {
+			return nil, false, nil
+		},
 	}
 }
 
@@ -90,6 +109,26 @@ func (f *fakeNode) GetSealTicket(ctx context.Context) (storage.SealTicket, error
 
 func (f *fakeNode) GetSealSeed(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{}) {
 	return f.getSealSeed(ctx, msg, interval)
+}
+
+func (f *fakeNode) CheckPieces(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError {
+	return f.checkPieces(ctx, sectorID, pieces)
+}
+
+func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError {
+	return f.checkSealing(ctx, commD, dealIDs)
+}
+
+func (f *fakeNode) GetReplicaCommitmentById(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error) {
+	return f.getReplicaCommitmentById(ctx, sectorID)
+}
+
+func (f *fakeNode) SendReportFaults(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error) {
+	return f.sendReportFaults(ctx, sectorIDs...)
+}
+
+func (f *fakeNode) WaitForReportFaults(ctx context.Context, msg cid.Cid) (uint8, error) {
+	return f.waitForReportFaults(ctx, msg)
 }
 
 func createCidForTesting(n int) cid.Cid {
