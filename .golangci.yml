@@ -6,7 +6,7 @@ linters:
     - misspell
     - goconst
     - golint
-#    - errcheck
+    - errcheck
 #    - gosec
 #    - unconvert
 #    - staticcheck
@@ -36,6 +36,9 @@ issues:
     - path: "lib/statemachine/machine.go"
       linters:
         - golint
+    - path: "lib/statemachine/machine_test.go"
+      linters:
+        - errcheck
     - path: node/modules/lp2p
       linters:
         - golint

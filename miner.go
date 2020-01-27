@@ -62,13 +62,13 @@ func (m *Miner) Start(ctx context.Context) error {
 		m.sealing = New(m.api, m.sb, m.ds, m.worker, m.maddr)
 	}
 
-	go m.sealing.Run(ctx)
+	go m.sealing.Run(ctx) // nolint: errcheck
 
 	return nil
 }
 
 func (m *Miner) Stop(ctx context.Context) error {
-	defer m.sealing.Stop(ctx)
+	defer m.sealing.Stop(ctx) // nolint: errcheck
 
 	return nil
 }
