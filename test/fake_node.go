@@ -2,10 +2,12 @@ package test
 
 import (
 	"context"
-	"github.com/filecoin-project/go-storage-miner"
+
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	mh "github.com/multiformats/go-multihash"
+
+	"github.com/filecoin-project/go-storage-miner"
 )
 
 type fakeNode struct {
