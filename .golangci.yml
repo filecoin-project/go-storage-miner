@@ -7,13 +7,13 @@ linters:
     - goconst
     - golint
     - errcheck
-#    - gosec
-#    - unconvert
-#    - staticcheck
-#    - varcheck
-#    - structcheck
-#    - deadcode
-#    - scopelint
+    - gosec
+    - unconvert
+    - staticcheck
+    - varcheck
+    - structcheck
+    - deadcode
+    - scopelint
 
 
 issues:
@@ -27,6 +27,8 @@ issues:
     - path: "fsm_test.go"
       linters:
         - govet
+        - staticcheck
+        - structcheck
     - path: "lib/statemachine/group.go"
       linters:
         - golint
@@ -36,6 +38,9 @@ issues:
     - path: "lib/statemachine/machine.go"
       linters:
         - golint
+    - path: "cbor_gen.go"
+      linters:
+        - unconvert
     - path: "lib/statemachine/machine_test.go"
       linters:
         - errcheck
