@@ -39,10 +39,10 @@ type NodeAPI interface {
 	// when they start encoding a sector.
 	GetSealTicket(context.Context) (SealTicket, error)
 
-	// GetReplicaCommitmentById produces the CommR associated with the given
+	// GetReplicaCommitmentByID produces the CommR associated with the given
 	// sector as it appears in a pre-commit message. If the sector has not been
 	// pre-committed, wasFound will be false.
-	GetReplicaCommitmentById(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
+	GetReplicaCommitmentByID(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
 
 	// GetSealSeed requests that a seal seed be provided through the return channel the given block interval after the preCommitMsg arrives on chain.
 	// It expects to be notified through the invalidated channel if a re-org sets the chain back to before the height at the interval.

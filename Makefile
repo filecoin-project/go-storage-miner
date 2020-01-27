@@ -42,7 +42,7 @@ test: $(BUILD_DEPS)
 .PHONY: test
 
 lint: $(BUILD_DEPS)
-	golangci-lint run -v --concurrency 2 --new-from-rev origin/master
+	golangci-lint run -v --concurrency 2
 .PHONY: lint
 
 build: $(BUILD_DEPS)

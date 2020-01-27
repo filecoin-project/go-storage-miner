@@ -7,7 +7,7 @@ const (
 	UndefinedSectorState SectorState = iota
 
 	// happy path
-	Empty
+	Empty   // an empty sector
 	Packing // sector not in sealStore, and not on chain
 
 	Unsealed      // sealing / queued

@@ -26,7 +26,7 @@ func failedCooldown(ctx statemachine.Context, sector SectorInfo) error {
 }
 
 func (m *Sealing) checkPreCommitted(ctx statemachine.Context, sector SectorInfo) (commR []byte, wasFound bool, err error) {
-	commR, found, err := m.api.GetReplicaCommitmentById(ctx.Context(), sector.SectorID)
+	commR, found, err := m.api.GetReplicaCommitmentByID(ctx.Context(), sector.SectorID)
 	if err != nil {
 		log.Errorf("handleSealFailed(%d): temp error: %+v", sector.SectorID, err)
 		return nil, false, err

@@ -23,7 +23,7 @@ type fakeNode struct {
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError
 	sendReportFaults         func(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error)
 	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
-	getReplicaCommitmentById func(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
+	getReplicaCommitmentByID func(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
 }
 
 func newFakeNode() *fakeNode {
@@ -75,7 +75,7 @@ func newFakeNode() *fakeNode {
 		waitForReportFaults: func(i context.Context, i2 cid.Cid) (u uint8, e error) {
 			return 0, nil
 		},
-		getReplicaCommitmentById: func(ctx context.Context, sectorID uint64) ([]byte, bool, error) {
+		getReplicaCommitmentByID: func(ctx context.Context, sectorID uint64) ([]byte, bool, error) {
 			return nil, false, nil
 		},
 	}
@@ -121,8 +121,8 @@ func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []uin
 	return f.checkSealing(ctx, commD, dealIDs)
 }
 
-func (f *fakeNode) GetReplicaCommitmentById(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error) {
-	return f.getReplicaCommitmentById(ctx, sectorID)
+func (f *fakeNode) GetReplicaCommitmentByID(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error) {
+	return f.getReplicaCommitmentByID(ctx, sectorID)
 }
 
 func (f *fakeNode) SendReportFaults(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error) {

@@ -6,14 +6,14 @@ linters:
     - misspell
     - goconst
     - golint
-    - errcheck
-    - gosec
-    - unconvert
-    - staticcheck
-    - varcheck
-    - structcheck
-    - deadcode
-    - scopelint
+#    - errcheck
+#    - gosec
+#    - unconvert
+#    - staticcheck
+#    - varcheck
+#    - structcheck
+#    - deadcode
+#    - scopelint
 
 
 issues:
@@ -24,6 +24,18 @@ issues:
 
   exclude-use-default: false
   exclude-rules:
+    - path: "fsm_test.go"
+      linters:
+        - govet
+    - path: "lib/statemachine/group.go"
+      linters:
+        - golint
+    - path: "sector_states.go"
+      linters:
+        - golint
+    - path: "lib/statemachine/machine.go"
+      linters:
+        - golint
     - path: node/modules/lp2p
       linters:
         - golint
