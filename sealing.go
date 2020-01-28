@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-sectorbuilder"
@@ -25,6 +26,11 @@ type Sealing struct {
 	// onSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
 	onSectorUpdated func(uint64, SectorState)
+
+	// runCompleteWg is incremented when Mining is created, and will prevent
+	// new sectors from being added to the StateGroup before existing sectors
+	// have been restarted. When Mining#Run exits, runCompleteWg is decremented.
+	runCompleteWg sync.WaitGroup
 }
 
 func New(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
@@ -40,12 +46,16 @@ func NewForTesting(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, work
 		onSectorUpdated: onSectorUpdated,
 	}
 
+	s.runCompleteWg.Add(1)
+
 	s.sectors = statemachine.New(namespace.Wrap(ds, datastore.NewKey(SectorStorePrefix)), s, SectorInfo{})
 
 	return s
 }
 
 func (m *Sealing) Run(ctx context.Context) error {
+	defer m.runCompleteWg.Done()
+
 	if err := m.restartSectors(ctx); err != nil {
 		log.Errorf("%+v", err)
 		return xerrors.Errorf("failed load sector states: %w", err)
@@ -70,6 +80,8 @@ func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, secto
 }
 
 func (m *Sealing) newSector(ctx context.Context, sid uint64, dealID uint64, ppi sectorbuilder.PublicPieceInfo) error {
+	m.runCompleteWg.Wait()
+
 	return m.sectors.Send(sid, SectorStart{
 		id: sid,
 		pieces: []Piece{
