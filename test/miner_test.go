@@ -35,7 +35,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerForTesting(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -96,7 +96,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), sb, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -142,7 +142,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(storage.PreCommitFailed).
 		end()
 
-	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -184,7 +184,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -227,7 +227,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerForTesting(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {

@@ -43,10 +43,10 @@ type Miner struct {
 }
 
 func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, error) {
-	return NewMinerForTesting(api, ds, sb, nil)
+	return NewMinerWithOnSectorUpdated(api, ds, sb, nil)
 }
 
-func NewMinerForTesting(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, onSectorUpdated func(uint64, SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, onSectorUpdated func(uint64, SectorState)) (*Miner, error) {
 	return &Miner{
 		api:             api,
 		ds:              ds,
