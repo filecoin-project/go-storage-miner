@@ -57,7 +57,7 @@ func NewMinerForTesting(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI,
 
 func (m *Miner) Start(ctx context.Context) error {
 	if m.onSectorUpdated != nil {
-		m.sealing = NewForTesting(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
+		m.sealing = NewWithOnSectorUpdated(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
 	} else {
 		m.sealing = New(m.api, m.sb, m.ds, m.worker, m.maddr)
 	}

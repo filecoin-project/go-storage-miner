@@ -34,10 +34,10 @@ type Sealing struct {
 }
 
 func New(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
-	return NewForTesting(api, sb, ds, worker, maddr, nil)
+	return NewWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
 }
 
-func NewForTesting(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
+func NewWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
