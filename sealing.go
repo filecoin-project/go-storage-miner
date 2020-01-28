@@ -65,6 +65,8 @@ func (m *Sealing) Run(ctx context.Context) error {
 }
 
 func (m *Sealing) Stop(ctx context.Context) error {
+	m.runCompleteWg.Add(1)
+
 	return m.sectors.Stop(ctx)
 }
 
