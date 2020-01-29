@@ -38,7 +38,7 @@ deps: $(BUILD_DEPS)
 .PHONY: deps
 
 test: $(BUILD_DEPS)
-	RUST_LOG=info go test -v -timeout 120m ./...
+	RUST_LOG=info go test -race -count 1 -v -timeout 120m ./...
 .PHONY: test
 
 lint: $(BUILD_DEPS)

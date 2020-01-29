@@ -24,6 +24,26 @@ issues:
 
   exclude-use-default: false
   exclude-rules:
+    - path: "fsm_test.go"
+      linters:
+        - govet
+        - staticcheck
+        - structcheck
+    - path: "lib/statemachine/group.go"
+      linters:
+        - golint
+    - path: "sector_states.go"
+      linters:
+        - golint
+    - path: "lib/statemachine/machine.go"
+      linters:
+        - golint
+    - path: "cbor_gen.go"
+      linters:
+        - unconvert
+    - path: "lib/statemachine/machine_test.go"
+      linters:
+        - errcheck
     - path: node/modules/lp2p
       linters:
         - golint

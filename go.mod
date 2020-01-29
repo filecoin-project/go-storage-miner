@@ -13,8 +13,8 @@ require (
 	github.com/ipfs/go-datastore v0.1.1
 	github.com/ipfs/go-ipld-cbor v0.0.3
 	github.com/ipfs/go-log v1.0.0
+	github.com/ipfs/go-log/v2 v2.0.2
 	github.com/multiformats/go-multihash v0.0.10
-	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0
 	github.com/whyrusleeping/cbor-gen v0.0.0-20191216205031-b047b6acb3c0
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543

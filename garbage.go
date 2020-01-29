@@ -11,7 +11,7 @@ import (
 	"github.com/filecoin-project/go-sectorbuilder"
 )
 
-func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPieceSizes []uint64, sizes ...uint64) ([]Piece, error) {
+func (m *Sealing) pledgeSector(ctx context.Context, sectorID uint64, existingPieceSizes []uint64, sizes ...uint64) ([]Piece, error) {
 	if len(sizes) == 0 {
 		return nil, nil
 	}
@@ -74,7 +74,7 @@ func (m *Miner) pledgeSector(ctx context.Context, sectorID uint64, existingPiece
 	return out, nil
 }
 
-func (m *Miner) PledgeSector() error {
+func (m *Sealing) PledgeSector() error {
 	go func() {
 		ctx := context.TODO() // we can't use the context from command which invokes
 		// this, as we run everything here async, and it's cancelled when the
@@ -99,5 +99,6 @@ func (m *Miner) PledgeSector() error {
 			return
 		}
 	}()
+
 	return nil
 }
