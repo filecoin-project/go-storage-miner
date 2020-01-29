@@ -3,10 +3,9 @@ package storage
 import (
 	"testing"
 
+	"github.com/filecoin-project/go-statemachine"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/stretchr/testify/require"
-
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
 )
 
 func init() {

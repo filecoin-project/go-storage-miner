@@ -10,11 +10,10 @@ import (
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-
-	"github.com/filecoin-project/go-storage-miner"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/filecoin-project/go-storage-miner"
 )
 
 const DefaultDealID = 42

@@ -6,9 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/filecoin-project/go-statemachine"
 	"golang.org/x/xerrors"
-
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
 )
 
 func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, error) {

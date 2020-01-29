@@ -6,7 +6,7 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner"
 
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type sectorStateTracker struct {
