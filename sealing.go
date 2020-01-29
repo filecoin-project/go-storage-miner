@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-datastore/namespace"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
+	"github.com/filecoin-project/go-statemachine"
 )
 
 type Sealing struct {

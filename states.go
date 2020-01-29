@@ -4,7 +4,7 @@ import (
 	"github.com/filecoin-project/go-sectorbuilder"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
+	"github.com/filecoin-project/go-statemachine"
 )
 
 const InteractivePoRepDelay = 8

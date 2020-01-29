@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
+	"github.com/filecoin-project/go-statemachine"
 )
 
 func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, error) {

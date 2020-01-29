@@ -6,7 +6,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/filecoin-project/go-storage-miner/lib/statemachine"
+	"github.com/filecoin-project/go-statemachine"
 )
 
 func init() {
