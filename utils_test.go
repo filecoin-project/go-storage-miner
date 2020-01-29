@@ -3,9 +3,8 @@ package storage
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/stretchr/testify/assert"
 )
 
 func testFill(t *testing.T, n uint64, exp []uint64) {
