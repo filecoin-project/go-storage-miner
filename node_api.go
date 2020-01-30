@@ -18,8 +18,6 @@ type NodeAPI interface {
 	// particular chain and returns the identity of the corresponding message.
 	SendPreCommitSector(ctx context.Context, sectorID uint64, commR []byte, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
 
-	WaitForPreCommitSector(context.Context, cid.Cid) (uint64, uint8, error)
-
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
 	SendProveCommitSector(ctx context.Context, sectorID uint64, proof []byte, dealids ...uint64) (cid.Cid, error)

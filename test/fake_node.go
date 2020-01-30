@@ -14,7 +14,6 @@ type fakeNode struct {
 	sendSelfDeals            func(context.Context, ...storage.PieceInfo) (cid.Cid, error)
 	waitForSelfDeals         func(context.Context, cid.Cid) (dealIds []uint64, exitCode uint8, err error)
 	sendPreCommitSector      func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error)
-	waitForPreCommitSector   func(context.Context, cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error)
 	sendProveCommitSector    func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
@@ -36,9 +35,6 @@ func newFakeNode() *fakeNode {
 		},
 		sendPreCommitSector: func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
 			return createCidForTesting(42), nil
-		},
-		waitForPreCommitSector: func(context.Context, cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error) {
-			return 42, 0, nil
 		},
 		sendProveCommitSector: func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error) {
 			return createCidForTesting(42), nil
@@ -91,10 +87,6 @@ func (f *fakeNode) WaitForSelfDeals(ctx context.Context, msg cid.Cid) (dealIds [
 
 func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
 	return f.sendPreCommitSector(ctx, sectorID, commR, ticket, pieces...)
-}
-
-func (f *fakeNode) WaitForPreCommitSector(ctx context.Context, msg cid.Cid) (processedAtBlockHeight uint64, exitCode uint8, err error) {
-	return f.waitForPreCommitSector(ctx, msg)
 }
 
 func (f *fakeNode) SendProveCommitSector(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error) {
