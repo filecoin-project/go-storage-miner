@@ -24,7 +24,7 @@ type NodeAPI interface {
 
 	// WaitForProveCommitSector blocks until the provided message is mined into
 	// a block.
-	WaitForProveCommitSector(context.Context, cid.Cid) (uint64, uint8, error)
+	WaitForProveCommitSector(context.Context, cid.Cid) (uint8, error)
 
 	// SendReportFaults reports sectors as faulty.
 	SendReportFaults(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error)
