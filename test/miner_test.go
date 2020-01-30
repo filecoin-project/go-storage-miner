@@ -209,8 +209,8 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.waitForProveCommitSector = func(i context.Context, i2 cid.Cid) (uint64, uint8, error) {
-			return 0, 0, errors.New("expected behavior")
+		n.waitForProveCommitSector = func(i context.Context, i2 cid.Cid) (uint8, error) {
+			return 0, errors.New("expected behavior")
 		}
 
 		return n

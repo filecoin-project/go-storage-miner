@@ -146,7 +146,7 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector SectorInfo) 
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
 
-	_, exitCode, err := m.api.WaitForProveCommitSector(ctx.Context(), *sector.CommitMessage)
+	exitCode, err := m.api.WaitForProveCommitSector(ctx.Context(), *sector.CommitMessage)
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("failed to wait for porep inclusion: %w", err)})
 	}
