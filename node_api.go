@@ -57,7 +57,7 @@ type NodeAPI interface {
 	// commitment of the given pieces associated with the given deals. The
 	// ordering of the deals must match the ordering of the related pieces in
 	// the sector.
-	CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64) *CheckSealingError
+	CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64, ticket SealTicket) *CheckSealingError
 }
 
 type PieceInfo struct {

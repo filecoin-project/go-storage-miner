@@ -11,18 +11,18 @@ import (
 )
 
 type fakeNode struct {
-	sendSelfDeals            func(context.Context, ...storage.PieceInfo) (cid.Cid, error)
-	waitForSelfDeals         func(context.Context, cid.Cid) (dealIds []uint64, exitCode uint8, err error)
+	checkPieces              func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError
+	checkSealing             func(ctx context.Context, commD []byte, dealIDs []uint64, ticket storage.SealTicket) *storage.CheckSealingError
+	getReplicaCommitmentByID func(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
+	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError)
+	getSealTicket            func(context.Context) (storage.SealTicket, error)
 	sendPreCommitSector      func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error)
-	waitForProveCommitSector func(context.Context, cid.Cid) (exitCode uint8, err error)
-	getSealTicket            func(context.Context) (storage.SealTicket, error)
-	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError)
-	checkPieces              func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError
-	checkSealing             func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError
 	sendReportFaults         func(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error)
+	sendSelfDeals            func(context.Context, ...storage.PieceInfo) (cid.Cid, error)
+	waitForProveCommitSector func(context.Context, cid.Cid) (exitCode uint8, err error)
 	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
-	getReplicaCommitmentByID func(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error)
+	waitForSelfDeals         func(context.Context, cid.Cid) (dealIds []uint64, exitCode uint8, err error)
 }
 
 func newFakeNode() *fakeNode {
@@ -62,7 +62,7 @@ func newFakeNode() *fakeNode {
 		checkPieces: func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError {
 			return nil
 		},
-		checkSealing: func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError {
+		checkSealing: func(ctx context.Context, commD []byte, dealIDs []uint64, ticket storage.SealTicket) *storage.CheckSealingError {
 			return nil
 		},
 		sendReportFaults: func(ctx context.Context, sectorIDs ...uint64) (i cid.Cid, e error) {
@@ -109,8 +109,8 @@ func (f *fakeNode) CheckPieces(ctx context.Context, sectorID uint64, pieces []st
 	return f.checkPieces(ctx, sectorID, pieces)
 }
 
-func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError {
-	return f.checkSealing(ctx, commD, dealIDs)
+func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64, ticket storage.SealTicket) *storage.CheckSealingError {
+	return f.checkSealing(ctx, commD, dealIDs, ticket)
 }
 
 func (f *fakeNode) GetReplicaCommitmentByID(ctx context.Context, sectorID uint64) (commR []byte, wasFound bool, err error) {
