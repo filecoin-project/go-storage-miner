@@ -6,6 +6,9 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
+type FinalityReached struct{}
+type SeedInvalidated struct{}
+
 type NodeAPI interface {
 	// SendSelfDeals publishes storage deals using the provided inputs and
 	// returns the identity of the corresponding PublishStorageDeals message.
@@ -44,7 +47,7 @@ type NodeAPI interface {
 
 	// GetSealSeed requests that a seal seed be provided through the return channel the given block interval after the preCommitMsg arrives on chain.
 	// It expects to be notified through the invalidated channel if a re-org sets the chain back to before the height at the interval.
-	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (seed <-chan SealSeed, err <-chan error, invalidated <-chan struct{}, done <-chan struct{})
+	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (<-chan SealSeed, <-chan SeedInvalidated, <-chan FinalityReached, <-chan *GetSealSeedError)
 
 	// CheckPieces ensures that the provides pieces' metadata exist in
 	// not yet-expired on-chain storage deals.
@@ -103,5 +106,26 @@ func NewCheckSealingError(inner error, etype CheckSealingErrorType) *CheckSealin
 }
 
 func (c CheckSealingError) Error() string {
+	return c.inner.Error()
+}
+
+type GetSealSeedErrorType = uint64
+
+const (
+	UndefinedGetSealSeedErrorType GetSealSeedErrorType = iota
+	GetSealSeedFailedError
+	GetSealSeedFatalError
+)
+
+type GetSealSeedError struct {
+	inner error
+	EType GetSealSeedErrorType
+}
+
+func NewGetSealSeedError(inner error, etype GetSealSeedErrorType) *GetSealSeedError {
+	return &GetSealSeedError{inner: inner, EType: etype}
+}
+
+func (c GetSealSeedError) Error() string {
 	return c.inner.Error()
 }
