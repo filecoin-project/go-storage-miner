@@ -76,6 +76,10 @@ type CheckPiecesError struct {
 	EType CheckPiecesErrorType
 }
 
+func NewCheckPiecesError(inner error, etype CheckPiecesErrorType) *CheckPiecesError {
+	return &CheckPiecesError{inner: inner, EType: etype}
+}
+
 func (c CheckPiecesError) Error() string {
 	return c.inner.Error()
 }
@@ -92,6 +96,10 @@ const (
 type CheckSealingError struct {
 	inner error
 	EType CheckSealingErrorType
+}
+
+func NewCheckSealingError(inner error, etype CheckSealingErrorType) *CheckSealingError {
+	return &CheckSealingError{inner: inner, EType: etype}
 }
 
 func (c CheckSealingError) Error() string {
