@@ -17,7 +17,7 @@ type fakeNode struct {
 	sendProveCommitSector    func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (exitCode uint8, err error)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
-	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{})
+	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError)
 	checkPieces              func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []uint64) *storage.CheckSealingError
 	sendReportFaults         func(ctx context.Context, sectorIDs ...uint64) (cid.Cid, error)
@@ -48,7 +48,7 @@ func newFakeNode() *fakeNode {
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
-		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{}) {
+		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError) {
 			seedChan := make(chan storage.SealSeed)
 			go func() {
 				seedChan <- storage.SealSeed{
@@ -57,7 +57,7 @@ func newFakeNode() *fakeNode {
 				}
 			}()
 
-			return seedChan, make(chan error), make(chan struct{}), make(chan struct{})
+			return seedChan, make(chan storage.SeedInvalidated), make(chan storage.FinalityReached), make(chan *storage.GetSealSeedError)
 		},
 		checkPieces: func(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError {
 			return nil
@@ -101,8 +101,8 @@ func (f *fakeNode) GetSealTicket(ctx context.Context) (storage.SealTicket, error
 	return f.getSealTicket(ctx)
 }
 
-func (f *fakeNode) GetSealSeed(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan error, <-chan struct{}, <-chan struct{}) {
-	return f.getSealSeed(ctx, msg, interval)
+func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsgCid cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError) {
+	return f.getSealSeed(ctx, preCommitMsgCid, interval)
 }
 
 func (f *fakeNode) CheckPieces(ctx context.Context, sectorID uint64, pieces []storage.Piece) *storage.CheckPiecesError {

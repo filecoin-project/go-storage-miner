@@ -99,7 +99,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInf
 }
 
 func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) error {
-	seedChan, errChan, invalidated, done := m.api.GetSealSeed(ctx.Context(), *sector.PreCommitMessage, InteractivePoRepDelay)
+	seedChan, invalidated, done, errChan := m.api.GetSealSeed(ctx.Context(), *sector.PreCommitMessage, InteractivePoRepDelay)
 
 	for {
 		select {
@@ -107,8 +107,16 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) er
 			return ctx.Send(SectorSeedReady{seed: seed})
 		case err := <-errChan:
 			log.Error("error waiting for precommit", err)
-			err = xerrors.Errorf("failed to get randomness for computing seal proof: %w", err)
-			return ctx.Send(SectorFatalError{error: err})
+
+			switch err.EType {
+			case GetSealSeedFailedError:
+				return ctx.Send(SectorPreCommitFailed{err.inner})
+			case GetSealSeedFatalError:
+				return ctx.Send(SectorFatalError{err.inner})
+			default:
+				log.Error("unhandled error from GetSealSeed: %+v", err)
+				return ctx.Send(SectorFatalError{err.inner})
+			}
 		case <-invalidated:
 			log.Warn("revert in interactive commit sector step")
 
