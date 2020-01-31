@@ -76,7 +76,7 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 }
 
 func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInfo) error {
-	if err := m.api.CheckSealing(ctx.Context(), sector.CommD, sector.deals()); err != nil {
+	if err := m.api.CheckSealing(ctx.Context(), sector.CommD, sector.deals(), sector.Ticket); err != nil {
 		switch err.EType {
 		case CheckSealingAPI:
 			log.Errorf("handlePreCommitting: api error, not proceeding: %+v", err)
