@@ -121,7 +121,5 @@ func (m *Miner) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorI
 // behavior to call this method more than once. It is undefined behavior to call
 // this method concurrently with any other Miner method.
 func (m *Miner) Stop(ctx context.Context) error {
-	defer m.sealing.Stop(ctx) // nolint: errcheck
-
-	return nil
+	return m.sealing.Stop(ctx)
 }
