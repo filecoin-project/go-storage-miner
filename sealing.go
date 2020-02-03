@@ -70,6 +70,20 @@ func (m *Sealing) Stop(ctx context.Context) error {
 	return m.sectors.Stop(ctx)
 }
 
+func (m *Sealing) AllocatePiece(size uint64) (sectorID uint64, offset uint64, err error) {
+	if padreader.PaddedSize(size) != size {
+		return 0, 0, xerrors.Errorf("cannot allocate unpadded piece")
+	}
+
+	sid, err := m.sb.AcquireSectorId() // TODO: Put more than one thing in a sector
+	if err != nil {
+		return 0, 0, xerrors.Errorf("acquiring sector ID: %w", err)
+	}
+
+	// offset hard-coded to 0 since we only put one thing in a sector for now
+	return sid, 0, nil
+}
+
 func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorID uint64, dealID uint64) error {
 	if padreader.PaddedSize(size) != size {
 		return xerrors.Errorf("cannot seal unpadded piece")
