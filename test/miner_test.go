@@ -42,7 +42,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	}()
 
 	// start the internal runloop
-	require.NoError(t, miner.Start(ctx))
+	require.NoError(t, miner.Run(ctx))
 
 	// kick off the state machine
 	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
@@ -107,7 +107,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	pieceReader := io.LimitReader(rand.New(rand.NewSource(42)), int64(pieceSize))
 
 	// kick off state transitions
-	require.NoError(t, miner.Start(ctx))
+	require.NoError(t, miner.Run(ctx))
 	require.NoError(t, miner.SealPiece(ctx, pieceSize, pieceReader, sectorID, DefaultDealID))
 
 	select {
@@ -149,7 +149,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	}()
 
 	// kick off state transitions
-	require.NoError(t, miner.Start(ctx))
+	require.NoError(t, miner.Run(ctx))
 	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
@@ -191,7 +191,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	}()
 
 	// kick off state transitions
-	require.NoError(t, miner.Start(ctx))
+	require.NoError(t, miner.Run(ctx))
 	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {
@@ -234,7 +234,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	}()
 
 	// kick off state transitions
-	require.NoError(t, miner.Start(ctx))
+	require.NoError(t, miner.Run(ctx))
 	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
 
 	select {

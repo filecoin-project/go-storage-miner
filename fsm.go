@@ -233,6 +233,7 @@ func (m *Sealing) restartSectors(ctx context.Context) error {
 	return nil
 }
 
+// ForceSectorState puts a sector with given ID into the given state.
 func (m *Sealing) ForceSectorState(ctx context.Context, id uint64, state SectorState) error {
 	return m.sectors.Send(id, SectorForceState{state})
 }
