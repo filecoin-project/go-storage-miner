@@ -26,7 +26,7 @@ func (fakeSectorBuilder) RateLimit() func() {
 	return func() {}
 }
 
-func (fakeSectorBuilder) AddPiece(pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error) {
+func (fakeSectorBuilder) AddPiece(ctx context.Context, pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error) {
 	return sectorbuilder.PublicPieceInfo{Size: pieceSize}, nil
 }
 
