@@ -26,11 +26,19 @@ func (fakeSectorBuilder) RateLimit() func() {
 	return func() {}
 }
 
-func (fakeSectorBuilder) AddPiece(pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error) {
+func (fakeSectorBuilder) AddPiece(ctx context.Context, pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error) {
 	return sectorbuilder.PublicPieceInfo{Size: pieceSize}, nil
 }
 
 //nolint:golint
 func (fakeSectorBuilder) AcquireSectorId() (uint64, error) {
 	return 42, nil
+}
+
+func (fakeSectorBuilder) DropStaged(context.Context, uint64) error {
+	return nil
+}
+
+func (fakeSectorBuilder) FinalizeSector(context.Context, uint64) error {
+	return nil
 }

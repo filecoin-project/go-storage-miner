@@ -1,7 +1,8 @@
 package storage
 
 import (
-	"github.com/filecoin-project/go-sectorbuilder"
+	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
 	"golang.org/x/xerrors"
 )
@@ -164,6 +165,23 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector SectorInfo) 
 	}
 
 	return ctx.Send(SectorProving{})
+}
+
+func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector SectorInfo) error {
+	// TODO: Maybe wait for some finality
+
+	if err := m.sb.FinalizeSector(ctx.Context(), sector.SectorID); err != nil {
+		if !xerrors.Is(err, fs.ErrNoSuitablePath) {
+			return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
+		}
+		log.Warnf("finalize sector: %v", err)
+	}
+
+	if err := m.sb.DropStaged(ctx.Context(), sector.SectorID); err != nil {
+		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("drop staged: %w", err)})
+	}
+
+	return ctx.Send(SectorFinalized{})
 }
 
 func (m *Sealing) handleFaulty(ctx statemachine.Context, sector SectorInfo) error {

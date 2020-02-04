@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/filecoin-project/go-storage-miner"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/filecoin-project/go-storage-miner"
 )
 
 type sectorStateTracker struct {

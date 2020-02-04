@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,12 @@ const PaddedBytesOneKiBSector = 1024
 func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	ctx := context.Background()
 
+	maddr, err := address.NewIDAddress(55)
+	require.NoError(t, err)
+
+	waddr, err := address.NewIDAddress(66)
+	require.NoError(t, err)
+
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, storage.Packing).
 		then(storage.Unsealed).
@@ -31,10 +38,11 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
+		then(storage.FinalizeSector).
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -58,6 +66,12 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 
 func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	ctx := context.Background()
+
+	maddr, err := address.NewIDAddress(55)
+	require.NoError(t, err)
+
+	waddr, err := address.NewIDAddress(66)
+	require.NoError(t, err)
 
 	// we'll assert the contents of this slice at the end of the test
 	var selfDealPieceSizes []uint64
@@ -92,10 +106,11 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
+		then(storage.FinalizeSector).
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, waddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -123,6 +138,12 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	ctx := context.Background()
 
+	maddr, err := address.NewIDAddress(55)
+	require.NoError(t, err)
+
+	waddr, err := address.NewIDAddress(66)
+	require.NoError(t, err)
+
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
@@ -141,7 +162,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(storage.PreCommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -163,6 +184,12 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	ctx := context.Background()
 
+	maddr, err := address.NewIDAddress(55)
+	require.NoError(t, err)
+
+	waddr, err := address.NewIDAddress(66)
+	require.NoError(t, err)
+
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
@@ -183,7 +210,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -204,6 +231,12 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 
 func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	ctx := context.Background()
+
+	maddr, err := address.NewIDAddress(55)
+	require.NoError(t, err)
+
+	waddr, err := address.NewIDAddress(66)
+	require.NoError(t, err)
 
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
@@ -226,7 +259,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {

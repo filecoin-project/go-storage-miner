@@ -14,6 +14,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
+const SectorStorePrefix = "/sectors"
+
 type Sealing struct {
 	api NodeAPI
 
@@ -33,11 +35,11 @@ type Sealing struct {
 	runCompleteWg sync.WaitGroup
 }
 
-func New(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
-	return NewWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
+func NewSealing(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
+	return NewSealingWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
 }
 
-func NewWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
+func NewSealingWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
@@ -85,13 +87,9 @@ func (m *Sealing) AllocatePiece(size uint64) (sectorID uint64, offset uint64, er
 }
 
 func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorID uint64, dealID uint64) error {
-	if padreader.PaddedSize(size) != size {
-		return xerrors.Errorf("cannot seal unpadded piece")
-	}
-
 	log.Infof("Seal piece for deal %d", dealID)
 
-	ppi, err := m.sb.AddPiece(size, sectorID, r, []uint64{})
+	ppi, err := m.sb.AddPiece(ctx, size, sectorID, r, []uint64{})
 	if err != nil {
 		return xerrors.Errorf("adding piece to sector: %w", err)
 	}
@@ -101,6 +99,8 @@ func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, secto
 
 func (m *Sealing) newSector(ctx context.Context, sid uint64, dealID uint64, ppi sectorbuilder.PublicPieceInfo) error {
 	m.runCompleteWg.Wait()
+
+	log.Infof("Start sealing %d", sid)
 
 	return m.sectors.Send(sid, SectorStart{
 		id: sid,

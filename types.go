@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/filecoin-project/go-sectorbuilder"
+	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/ipfs/go-cid"
 )
 
