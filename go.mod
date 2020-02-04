@@ -4,10 +4,10 @@ go 1.13
 
 require (
 	github.com/filecoin-project/filecoin-ffi v0.0.0-20191219131535-bb699517a590
-	github.com/filecoin-project/go-address v0.0.0-20191219011437-af739c490b4f
+	github.com/filecoin-project/go-address v0.0.0-20200107215422-da8eea2842b5
 	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
 	github.com/filecoin-project/go-padreader v0.0.0-20200129213049-ea73e2aaabd1
-	github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200114015900-4103afa82689
+	github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200131010043-6b57024f839c
 	github.com/filecoin-project/go-statemachine v0.0.0-20200129214539-c78c5f7e9f9c
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-datastore v0.1.1
