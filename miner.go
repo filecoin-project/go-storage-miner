@@ -109,9 +109,9 @@ func (m *Miner) Run(ctx context.Context) error {
 	}
 
 	if m.onSectorUpdated != nil {
-		m.sealing = NewWithOnSectorUpdated(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
+		m.sealing = NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
 	} else {
-		m.sealing = New(m.api, m.sb, m.ds, m.worker, m.maddr)
+		m.sealing = NewSealing(m.api, m.sb, m.ds, m.worker, m.maddr)
 	}
 
 	go m.sealing.Run(ctx) // nolint: errcheck

@@ -35,11 +35,11 @@ type Sealing struct {
 	runCompleteWg sync.WaitGroup
 }
 
-func New(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
-	return NewWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
+func NewSealing(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
+	return NewSealingWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
 }
 
-func NewWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
+func NewSealingWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(uint64, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
