@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	ffi "github.com/filecoin-project/filecoin-ffi"
@@ -9,6 +10,7 @@ import (
 	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
+	"golang.org/x/xerrors"
 )
 
 var log = logging.Logger("storageminer")
@@ -42,15 +44,18 @@ type Miner struct {
 	onSectorUpdated func(uint64, SectorState)
 }
 
-func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, nil)
+func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr, waddr address.Address) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, waddr, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, onSectorUpdated func(uint64, SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr, waddr address.Address, onSectorUpdated func(uint64, SectorState)) (*Miner, error) {
 	return &Miner{
 		api:             api,
-		ds:              ds,
+		maddr:           maddr,
+		worker:          waddr,
 		sb:              sb,
+		ds:              ds,
+		sealing:         nil,
 		onSectorUpdated: onSectorUpdated,
 	}, nil
 }
@@ -99,6 +104,10 @@ func (m *Miner) PledgeSector() error {
 // call this method more than once. It is undefined behavior to call this method
 // concurrently with any other Miner method.
 func (m *Miner) Run(ctx context.Context) error {
+	if err := m.runPreflightChecks(ctx); err != nil {
+		return xerrors.Errorf("miner preflight checks failed: %w", err)
+	}
+
 	if m.onSectorUpdated != nil {
 		m.sealing = NewWithOnSectorUpdated(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
 	} else {
@@ -122,4 +131,22 @@ func (m *Miner) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorI
 // this method concurrently with any other Miner method.
 func (m *Miner) Stop(ctx context.Context) error {
 	return m.sealing.Stop(ctx)
+}
+
+func (m *Miner) runPreflightChecks(ctx context.Context) error {
+	if m.worker == address.Undef {
+		return xerrors.New("miner worker address has not been set")
+	}
+
+	has, err := m.api.WalletHas(ctx, m.worker)
+	if err != nil {
+		return xerrors.Errorf("failed to check wallet for worker key: %w", err)
+	}
+
+	if !has {
+		return errors.New("key for worker not found in local wallet")
+	}
+
+	log.Infof("starting up miner %s, worker addr %s", m.maddr, m.worker)
+	return nil
 }

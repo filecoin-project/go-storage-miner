@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
 )
 
@@ -58,6 +59,10 @@ type NodeAPI interface {
 	// ordering of the deals must match the ordering of the related pieces in
 	// the sector.
 	CheckSealing(ctx context.Context, commD []byte, dealIDs []uint64, ticket SealTicket) *CheckSealingError
+
+	// WalletHas checks the wallet for the key associated with the provided
+	// address.
+	WalletHas(ctx context.Context, addr address.Address) (bool, error)
 }
 
 type PieceInfo struct {

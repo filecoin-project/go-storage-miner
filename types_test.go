@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
-
 	"github.com/stretchr/testify/assert"
 )
 
