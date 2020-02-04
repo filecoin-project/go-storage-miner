@@ -31,6 +31,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
+		then(storage.FinalizeSector).
 		then(storage.Proving).
 		end()
 
@@ -92,6 +93,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(storage.WaitSeed).
 		then(storage.Committing).
 		then(storage.CommitWait).
+		then(storage.FinalizeSector).
 		then(storage.Proving).
 		end()
 
