@@ -13,18 +13,18 @@ import (
 
 var log = logging.Logger("storageminer")
 
-const SectorStorePrefix = "/sectors"
-
 // SectorBuilderAPI provides a method set used by the miner in order to interact
 // with the go-sectorbuilder package. This method set exposes a subset of the
 // methods defined on the sectorbuilder.Interface interface.
 type SectorBuilderAPI interface {
-	SectorSize() uint64
-	SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
-	SealCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
-	RateLimit() func()
-	AddPiece(ctx context.Context, pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
 	AcquireSectorId() (uint64, error)
+	AddPiece(ctx context.Context, pieceSize uint64, sectorID uint64, file io.Reader, existingPieceSizes []uint64) (sectorbuilder.PublicPieceInfo, error)
+	DropStaged(context.Context, uint64) error
+	FinalizeSector(context.Context, uint64) error
+	RateLimit() func()
+	SealCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
+	SealPreCommit(ctx context.Context, sectorID uint64, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
+	SectorSize() uint64
 }
 
 var _ SectorBuilderAPI = new(sectorbuilder.SectorBuilder)

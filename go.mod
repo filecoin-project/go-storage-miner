@@ -9,6 +9,7 @@ require (
 	github.com/filecoin-project/go-padreader v0.0.0-20200129213049-ea73e2aaabd1
 	github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200131010043-6b57024f839c
 	github.com/filecoin-project/go-statemachine v0.0.0-20200129214539-c78c5f7e9f9c
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-datastore v0.1.1
 	github.com/ipfs/go-ipld-cbor v0.0.3

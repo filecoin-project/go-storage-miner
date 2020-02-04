@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-padreader"
@@ -13,6 +12,8 @@ import (
 	"github.com/ipfs/go-datastore/namespace"
 	"golang.org/x/xerrors"
 )
+
+const SectorStorePrefix = "/sectors"
 
 type Sealing struct {
 	api NodeAPI
@@ -26,11 +27,6 @@ type Sealing struct {
 	// onSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
 	onSectorUpdated func(uint64, SectorState)
-
-	// runCompleteWg is incremented when Mining is created, and will prevent
-	// new sectors from being added to the StateGroup before existing sectors
-	// have been restarted. When Mining#Run exits, runCompleteWg is decremented.
-	runCompleteWg sync.WaitGroup
 }
 
 func New(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
@@ -46,16 +42,12 @@ func NewWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batch
 		onSectorUpdated: onSectorUpdated,
 	}
 
-	s.runCompleteWg.Add(1)
-
 	s.sectors = statemachine.New(namespace.Wrap(ds, datastore.NewKey(SectorStorePrefix)), s, SectorInfo{})
 
 	return s
 }
 
 func (m *Sealing) Run(ctx context.Context) error {
-	defer m.runCompleteWg.Done()
-
 	if err := m.restartSectors(ctx); err != nil {
 		log.Errorf("%+v", err)
 		return xerrors.Errorf("failed load sector states: %w", err)
@@ -65,8 +57,6 @@ func (m *Sealing) Run(ctx context.Context) error {
 }
 
 func (m *Sealing) Stop(ctx context.Context) error {
-	m.runCompleteWg.Add(1)
-
 	return m.sectors.Stop(ctx)
 }
 
@@ -85,10 +75,6 @@ func (m *Sealing) AllocatePiece(size uint64) (sectorID uint64, offset uint64, er
 }
 
 func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorID uint64, dealID uint64) error {
-	if padreader.PaddedSize(size) != size {
-		return xerrors.Errorf("cannot seal unpadded piece")
-	}
-
 	log.Infof("Seal piece for deal %d", dealID)
 
 	ppi, err := m.sb.AddPiece(ctx, size, sectorID, r, []uint64{})
@@ -100,8 +86,7 @@ func (m *Sealing) SealPiece(ctx context.Context, size uint64, r io.Reader, secto
 }
 
 func (m *Sealing) newSector(ctx context.Context, sid uint64, dealID uint64, ppi sectorbuilder.PublicPieceInfo) error {
-	m.runCompleteWg.Wait()
-
+	log.Infof("Start sealing %d", sid)
 	return m.sectors.Send(sid, SectorStart{
 		id: sid,
 		pieces: []Piece{

@@ -41,5 +41,4 @@ func TestFillersFromRem(t *testing.T) {
 		ub = sectorbuilder.UserBytesForSectorSize(uint64(9) << i)
 		testFill(t, ub, []uint64{ub1, ub4})
 	}
-
 }

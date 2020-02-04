@@ -118,6 +118,14 @@ type SectorProving struct{}
 
 func (evt SectorProving) apply(*SectorInfo) {}
 
+type SectorFinalized struct{}
+
+func (evt SectorFinalized) apply(*SectorInfo) {}
+
+type SectorFinalizeFailed struct{ error }
+
+func (evt SectorFinalizeFailed) apply(*SectorInfo) {}
+
 // Failed state recovery
 
 type SectorRetrySeal struct{}

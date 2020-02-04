@@ -48,6 +48,9 @@ func TestHappyPath(t *testing.T) {
 	require.Equal(m.t, m.state.State, CommitWait)
 
 	m.planSingle(SectorProving{})
+	require.Equal(m.t, m.state.State, FinalizeSector)
+
+	m.planSingle(SectorFinalized{})
 	require.Equal(m.t, m.state.State, Proving)
 }
 
@@ -79,5 +82,22 @@ func TestSeedRevert(t *testing.T) {
 	require.Equal(m.t, m.state.State, CommitWait)
 
 	m.planSingle(SectorProving{})
+	require.Equal(m.t, m.state.State, FinalizeSector)
+
+	m.planSingle(SectorFinalized{})
 	require.Equal(m.t, m.state.State, Proving)
+}
+
+func TestPlanCommittingHandlesSectorCommitFailed(t *testing.T) {
+	m := test{
+		s:     &Sealing{},
+		t:     t,
+		state: &SectorInfo{State: Committing},
+	}
+
+	events := []statemachine.Event{{SectorCommitFailed{}}}
+
+	require.NoError(t, planCommitting(events, m.state))
+
+	require.Equal(t, SectorStates[CommitFailed], SectorStates[m.state.State])
 }

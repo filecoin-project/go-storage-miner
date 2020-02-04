@@ -34,3 +34,11 @@ func (fakeSectorBuilder) AddPiece(ctx context.Context, pieceSize uint64, sectorI
 func (fakeSectorBuilder) AcquireSectorId() (uint64, error) {
 	return 42, nil
 }
+
+func (fakeSectorBuilder) DropStaged(context.Context, uint64) error {
+	return nil
+}
+
+func (fakeSectorBuilder) FinalizeSector(context.Context, uint64) error {
+	return nil
+}
