@@ -36,7 +36,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorID uint64, existingPie
 
 	pieces := make([]PieceInfo, len(sizes))
 	for i, size := range sizes {
-		commP, err := m.fastPledgeCommitment(size, uint64(runtime.NumCPU()))
+		commP, err := m.FastPledgeCommitment(size, uint64(runtime.NumCPU()))
 		if err != nil {
 			return nil, err
 		}

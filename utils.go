@@ -46,7 +46,8 @@ func fillersFromRem(toFill uint64) ([]uint64, error) {
 	return out, nil
 }
 
-func (m *Sealing) fastPledgeCommitment(size uint64, parts uint64) (commP [sectorbuilder.CommLen]byte, err error) {
+// FastPledgeCommitment generates parts-quantity piece commitments in parallel.
+func (m *Sealing) FastPledgeCommitment(size uint64, parts uint64) (commP [sectorbuilder.CommLen]byte, err error) {
 	parts = 1 << bits.Len64(parts) // round down to nearest power of 2
 	if size/parts < 127 {
 		parts = size / 127
