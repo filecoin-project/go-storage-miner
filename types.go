@@ -1,8 +1,11 @@
 package storage
 
 import (
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 )
 
 type SealTicket struct {
@@ -32,16 +35,26 @@ func (t *SealSeed) Equals(o *SealSeed) bool {
 }
 
 type Piece struct {
-	DealID uint64
-
-	Size  uint64
-	CommP []byte
+	DealID   abi.DealID
+	Size     abi.PaddedPieceSize
+	PieceCID cid.Cid
 }
 
-func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo) {
-	out.Size = p.Size
-	copy(out.CommP[:], p.CommP)
-	return out
+func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo, err error) {
+	out.Size = p.Size.Unpadded()
+
+	commP, code, err := commcid.CIDToCommitment(p.PieceCID)
+	if err != nil {
+		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("failed to map CID to CommP: ", err)
+	}
+
+	if code != commcid.FC_UNSEALED_V1 {
+		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("unhandled hashing algorithm: expected %d and got %d", commcid.FC_UNSEALED_V1, code)
+	}
+
+	copy(out.CommP[:], commP)
+
+	return out, nil
 }
 
 type Log struct {
@@ -55,9 +68,9 @@ type Log struct {
 }
 
 type SectorInfo struct {
-	State    SectorState
-	SectorID uint64
-	Nonce    uint64 // TODO: remove
+	State     SectorState
+	SectorNum abi.SectorNumber
+	Nonce     uint64 // TODO: remove
 
 	// Packing
 
@@ -86,27 +99,35 @@ type SectorInfo struct {
 	Log []Log
 }
 
-func (t *SectorInfo) pieceInfos() []sectorbuilder.PublicPieceInfo {
+func (t *SectorInfo) pieceInfos() ([]sectorbuilder.PublicPieceInfo, error) {
 	out := make([]sectorbuilder.PublicPieceInfo, len(t.Pieces))
 	for i, piece := range t.Pieces {
-		out[i] = piece.ppi()
+		ppi, err := piece.ppi()
+		if err != nil {
+			return nil, xerrors.Errorf("failed to map to PublicPieceInfo: ", err)
+		}
+
+		out[i] = ppi
 	}
-	return out
+
+	return out, nil
 }
 
-func (t *SectorInfo) deals() []uint64 {
-	out := make([]uint64, len(t.Pieces))
+func (t *SectorInfo) deals() []abi.DealID {
+	out := make([]abi.DealID, len(t.Pieces))
 	for i, piece := range t.Pieces {
 		out[i] = piece.DealID
 	}
+
 	return out
 }
 
-func (t *SectorInfo) existingPieces() []uint64 {
-	out := make([]uint64, len(t.Pieces))
+func (t *SectorInfo) existingPieces() []abi.PaddedPieceSize {
+	out := make([]abi.PaddedPieceSize, len(t.Pieces))
 	for i, piece := range t.Pieces {
 		out[i] = piece.Size
 	}
+
 	return out
 }
 

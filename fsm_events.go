@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 )
 
@@ -24,7 +25,7 @@ func (evt SectorRestart) applyGlobal(*SectorInfo) bool { return false }
 type SectorFatalError struct{ error }
 
 func (evt SectorFatalError) applyGlobal(state *SectorInfo) bool {
-	log.Errorf("Fatal error on sector %d: %+v", state.SectorID, evt.error)
+	log.Errorf("Fatal error on sector %d: %+v", state.SectorNum, evt.error)
 	// TODO: Do we want to mark the state as unrecoverable?
 	//  I feel like this should be a softer error, where the user would
 	//  be able to send a retry event of some kind
@@ -43,12 +44,12 @@ func (evt SectorForceState) applyGlobal(state *SectorInfo) bool {
 // Normal path
 
 type SectorStart struct {
-	id     uint64
+	num    abi.SectorNumber
 	pieces []Piece
 }
 
 func (evt SectorStart) apply(state *SectorInfo) {
-	state.SectorID = evt.id
+	state.SectorNum = evt.num
 	state.Pieces = evt.pieces
 }
 

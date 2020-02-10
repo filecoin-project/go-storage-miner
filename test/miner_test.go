@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/assert"
@@ -87,8 +88,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			return createCidForTesting(42), nil
 		}
 
-		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []uint64, exitCode uint8, err error) {
-			return []uint64{42, 43}, 0, nil
+		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
+			return []abi.DealID{42, 43}, 0, nil
 		}
 
 		return n
@@ -97,7 +98,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	sb := &fakeSectorBuilder{}
 
 	// a sequence of sector state transitions we expect to observe
-	sectorID, err := sb.AcquireSectorId()
+	sectorID, err := sb.AcquireSectorNumber()
 	require.NoError(t, err)
 
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, sectorID, storage.Packing).
@@ -118,7 +119,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	}()
 
 	// create a piece which fills up a quarter of the sector
-	pieceSize := uint64(1016 / 4)
+	pieceSize := abi.UnpaddedPieceSize(uint64(1016 / 4))
 	pieceReader := io.LimitReader(rand.New(rand.NewSource(42)), int64(pieceSize))
 
 	// kick off state transitions
@@ -148,7 +149,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendPreCommitSector = func(ctx context.Context, sectorID uint64, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (i cid.Cid, e error) {
+		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (i cid.Cid, e error) {
 			return cid.Undef, errors.New("expected error")
 		}
 
@@ -194,7 +195,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendProveCommitSector = func(ctx context.Context, sectorID uint64, proof []byte, dealIds ...uint64) (i cid.Cid, e error) {
+		n.sendProveCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (i cid.Cid, e error) {
 			return cid.Undef, errors.New("expected error")
 		}
 
