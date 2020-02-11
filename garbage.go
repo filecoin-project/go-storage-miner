@@ -7,17 +7,23 @@ import (
 	"math/rand"
 	"runtime"
 
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/specs-actors/actors/abi"
+	builtin "github.com/filecoin-project/specs-actors/actors/builtin"
+	market "github.com/filecoin-project/specs-actors/actors/builtin/market"
 	"golang.org/x/xerrors"
 )
 
-func (m *Sealing) pledgeReader(size uint64, parts uint64) io.Reader {
+func (m *Sealing) pledgeReader(size abi.UnpaddedPieceSize, parts uint64) io.Reader {
+	n := uint64(size)
+
 	parts = 1 << bits.Len64(parts) // round down to nearest power of 2
-	if size/parts < 127 {
-		parts = size / 127
+	if n/parts < 127 {
+		parts = n / 127
 	}
 
-	piece := sectorbuilder.UserBytesForSectorSize((size/127 + size) / parts)
+	piece := sectorbuilder.UserBytesForSectorSize(abi.SectorSize((n/127 + n) / parts))
 
 	readers := make([]io.Reader, parts)
 	for i := range readers {
@@ -27,54 +33,70 @@ func (m *Sealing) pledgeReader(size uint64, parts uint64) io.Reader {
 	return io.MultiReader(readers...)
 }
 
-func (m *Sealing) pledgeSector(ctx context.Context, sectorID uint64, existingPieceSizes []uint64, sizes ...uint64) ([]Piece, error) {
+func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]Piece, error) {
 	if len(sizes) == 0 {
 		return nil, nil
 	}
 
-	log.Infof("Pledge %d, contains %+v", sectorID, existingPieceSizes)
+	log.Infof("Pledge %d, contains %+v", sectorNum, existingPieceSizes)
 
-	pieces := make([]PieceInfo, len(sizes))
+	waddr, err := m.api.GetMinerWorkerAddressFromChainHead(ctx, m.maddr)
+	if err != nil {
+		return nil, handle("failed to get worker address: ", err)
+	}
+
+	arg := &market.PublishStorageDealsParams{
+		Deals: make([]market.ClientDealProposal, len(sizes)),
+	}
+
 	for i, size := range sizes {
-		commP, err := m.FastPledgeCommitment(size, uint64(runtime.NumCPU()))
+		commP, err := m.FastPledgeCommitment(size, uint64(1))
 		if err != nil {
-			return nil, err
+			return nil, handle("failed to generate pledge commitment: ", err)
 		}
 
-		pieces[i] = PieceInfo{
-			Size:  size,
-			CommP: commP,
+		sdp := market.ClientDealProposal{
+			Proposal: market.DealProposal{
+				Client:               waddr,
+				ClientCollateral:     abi.NewTokenAmount(0),
+				EndEpoch:             abi.ChainEpoch(0),
+				PieceCID:             commcid.PieceCommitmentV1ToCID(commP[:]),
+				PieceSize:            size.Padded(),
+				Provider:             m.maddr,
+				ProviderCollateral:   abi.NewTokenAmount(0),
+				StartEpoch:           abi.ChainEpoch(0),
+				StoragePricePerEpoch: abi.NewTokenAmount(0),
+			},
 		}
+
+		arg.Deals[i] = sdp
 	}
 
-	log.Infof("Publishing deals for %d", sectorID)
+	log.Infof("Publishing deals for %d", sectorNum)
 
-	mcid, err := m.api.SendSelfDeals(ctx, pieces...)
+	mcid, err := send(m.api, waddr, builtin.StorageMarketActorAddr, builtin.MethodsMarket.PublishStorageDeals, abi.NewTokenAmount(0), arg)
 	if err != nil {
-		return nil, err
+		return nil, handle("failed to send message to storage market actor: ", err)
 	}
 
-	dealIDs, exitCode, err := m.api.WaitForSelfDeals(ctx, mcid)
+	ret := new(market.PublishStorageDealsReturn)
+	exitCode, err := wait(ctx, m.api, mcid, ret)
 	if err != nil {
-		return nil, err
+		return nil, handle("failed to wait for message: ", err)
 	}
 
 	if exitCode != 0 {
-		err := xerrors.Errorf("publishing deal failed: exit %d", exitCode)
-		log.Error(err)
-		return nil, err
+		return nil, handle("publishing deal failed: exit %d", exitCode)
 	}
 
-	if len(dealIDs) != len(sizes) {
-		err := xerrors.New("got unexpected number of DealIDs from PublishStorageDeals")
-		log.Error(err)
-		return nil, err
+	if len(ret.IDs) != len(sizes) {
+		return nil, handle("got unexpected number of DealIDs from PublishStorageDeals")
 	}
 
 	out := make([]Piece, len(sizes))
 
 	for i, size := range sizes {
-		ppi, err := m.sb.AddPiece(ctx, size, sectorID, m.pledgeReader(size, uint64(runtime.NumCPU())), existingPieceSizes)
+		ppi, err := m.sb.AddPiece(ctx, size, sectorNum, m.pledgeReader(size, uint64(runtime.NumCPU())), existingPieceSizes)
 		if err != nil {
 			return nil, xerrors.Errorf("add piece: %w", err)
 		}
@@ -82,9 +104,9 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorID uint64, existingPie
 		existingPieceSizes = append(existingPieceSizes, size)
 
 		out[i] = Piece{
-			DealID: dealIDs[i],
-			Size:   ppi.Size,
-			CommP:  ppi.CommP[:],
+			DealID:   ret.IDs[i],
+			Size:     ppi.Size.Padded(),
+			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
 		}
 	}
 
@@ -99,19 +121,25 @@ func (m *Sealing) PledgeSector() error {
 
 		size := sectorbuilder.UserBytesForSectorSize(m.sb.SectorSize())
 
-		sid, err := m.sb.AcquireSectorId()
+		num, err := m.sb.AcquireSectorNumber()
 		if err != nil {
 			log.Errorf("%+v", err)
 			return
 		}
 
-		pieces, err := m.pledgeSector(ctx, sid, []uint64{}, size)
+		pieces, err := m.pledgeSector(ctx, num, []abi.UnpaddedPieceSize{}, size)
 		if err != nil {
 			log.Errorf("%+v", err)
 			return
 		}
 
-		if err := m.newSector(context.TODO(), sid, pieces[0].DealID, pieces[0].ppi()); err != nil {
+		ppi, err := pieces[0].ppi()
+		if err != nil {
+			log.Errorf("%+v", err)
+			return
+		}
+
+		if err := m.newSector(context.TODO(), num, pieces[0].DealID, ppi); err != nil {
 			log.Errorf("%+v", err)
 			return
 		}

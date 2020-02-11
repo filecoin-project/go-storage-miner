@@ -7,20 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/go-storage-miner"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 )
 
 type sectorStateTracker struct {
 	actualSequence   []storage.SectorState
 	expectedSequence []storage.SectorState
-	sectorID         uint64
+	sectorNum        abi.SectorNumber
 	t                *testing.T
 }
 
-func begin(t *testing.T, sectorID uint64, initialState storage.SectorState) *sectorStateTracker {
+func begin(t *testing.T, sectorNum abi.SectorNumber, initialState storage.SectorState) *sectorStateTracker {
 	return &sectorStateTracker{
 		actualSequence:   []storage.SectorState{},
 		expectedSequence: []storage.SectorState{initialState},
-		sectorID:         sectorID,
+		sectorNum:        sectorNum,
 		t:                t,
 	}
 }
@@ -30,13 +31,13 @@ func (f *sectorStateTracker) then(s storage.SectorState) *sectorStateTracker {
 	return f
 }
 
-func (f *sectorStateTracker) end() (func(uint64, storage.SectorState), func() string, <-chan struct{}) {
+func (f *sectorStateTracker) end() (func(abi.SectorNumber, storage.SectorState), func() string, <-chan struct{}) {
 	var indx int
 	var last storage.SectorState
 	done := make(chan struct{})
 
-	next := func(sectorID uint64, curr storage.SectorState) {
-		if sectorID != f.sectorID {
+	next := func(sectorNum abi.SectorNumber, curr storage.SectorState) {
+		if sectorNum != f.sectorNum {
 			return
 		}
 

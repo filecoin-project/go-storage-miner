@@ -5,18 +5,21 @@ import (
 	"testing"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSectorInfoSelialization(t *testing.T) {
+	var commP [32]byte
+
 	si := &SectorInfo{
-		State:    123,
-		SectorID: 234,
-		Nonce:    345,
+		State:     123,
+		SectorNum: 234,
+		Nonce:     345,
 		Pieces: []Piece{{
-			DealID: 1234,
-			Size:   5,
-			CommP:  []byte{3},
+			DealID:   1234,
+			Size:     5,
+			PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
 		}},
 		CommD: []byte{32, 4},
 		CommR: nil,
@@ -44,7 +47,7 @@ func TestSectorInfoSelialization(t *testing.T) {
 
 	assert.Equal(t, si.State, si2.State)
 	assert.Equal(t, si.Nonce, si2.Nonce)
-	assert.Equal(t, si.SectorID, si2.SectorID)
+	assert.Equal(t, si.SectorNum, si2.SectorNum)
 
 	assert.Equal(t, si.Pieces, si2.Pieces)
 	assert.Equal(t, si.CommD, si2.CommD)

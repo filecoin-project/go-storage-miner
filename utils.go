@@ -1,16 +1,65 @@
 package storage
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"math/bits"
 	"math/rand"
 	"sync"
 
+	"github.com/filecoin-project/go-address"
+	runtime2 "github.com/filecoin-project/specs-actors/actors/runtime"
+	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
+
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/hashicorp/go-multierror"
 )
 
-func fillersFromRem(toFill uint64) ([]uint64, error) {
+type sender interface {
+	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
+}
+
+type waiter interface {
+	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
+}
+
+func send(api sender, from, to address.Address, method abi.MethodNum, value abi.TokenAmount, input runtime2.CBORMarshaler) (cid.Cid, error) {
+	argBuf := new(bytes.Buffer)
+	if err := input.MarshalCBOR(argBuf); err != nil {
+		return cid.Undef, handle("marshaling to CBOR bytes failed: ", err)
+	}
+
+	return api.SendMessage(from, to, method, value, argBuf.Bytes())
+}
+
+func wait(ctx context.Context, api waiter, msg cid.Cid, output runtime2.CBORUnmarshaler) (uint8, error) {
+	wmsg, err := api.WaitMessage(ctx, msg)
+	if err != nil {
+		return 0, handle("waiting for message failed: ", err)
+	}
+
+	if wmsg.Receipt.ExitCode != 0 {
+		return wmsg.Receipt.ExitCode, nil
+	}
+
+	if err = output.UnmarshalCBOR(bytes.NewReader(wmsg.Receipt.Return)); err != nil {
+		return wmsg.Receipt.ExitCode, handle("unmarshaling CBOR bytes failed: ", err)
+	}
+
+	return wmsg.Receipt.ExitCode, nil
+}
+
+func handle(format string, x ...interface{}) error {
+	err := xerrors.Errorf(format, x)
+	log.Error(err)
+
+	return err
+}
+
+func fillersFromRem(toFill abi.UnpaddedPieceSize) ([]abi.UnpaddedPieceSize, error) {
 	// Convert to in-sector bytes for easier math:
 	//
 	// Sector size to user bytes ratio is constant, e.g. for 1024B we have 1016B
@@ -23,37 +72,42 @@ func fillersFromRem(toFill uint64) ([]uint64, error) {
 	//
 	// (we convert to sector bytes as they are nice round binary numbers)
 
-	toFill += toFill / 127
+	n := uint64(toFill)
+
+	n += n / 127
 
 	// We need to fill the sector with pieces that are powers of 2. Conveniently
 	// computers store numbers in binary, which means we can look at 1s to get
 	// all the piece sizes we need to fill the sector. It also means that number
 	// of pieces is the number of 1s in the number of remaining bytes to fill
-	out := make([]uint64, bits.OnesCount64(toFill))
+	out := make([]abi.UnpaddedPieceSize, bits.OnesCount64(n))
 	for i := range out {
 		// Extract the next lowest non-zero bit
-		next := bits.TrailingZeros64(toFill)
+		next := bits.TrailingZeros64(n)
 		psize := uint64(1) << next
 		// e.g: if the number is 0b010100, psize will be 0b000100
 
 		// set that bit to 0 by XORing it, so the next iteration looks at the
 		// next bit
-		toFill ^= psize
+		n ^= psize
 
 		// Add the piece size to the list of pieces we need to create
-		out[i] = sectorbuilder.UserBytesForSectorSize(psize)
+		out[i] = abi.PaddedPieceSize(psize).Unpadded()
 	}
+
 	return out, nil
 }
 
 // FastPledgeCommitment generates parts-quantity piece commitments in parallel.
-func (m *Sealing) FastPledgeCommitment(size uint64, parts uint64) (commP [sectorbuilder.CommLen]byte, err error) {
+func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64) (commP [sectorbuilder.CommLen]byte, err error) {
+	n := uint64(size)
+
 	parts = 1 << bits.Len64(parts) // round down to nearest power of 2
-	if size/parts < 127 {
-		parts = size / 127
+	if n/parts < 127 {
+		parts = n / 127
 	}
 
-	piece := sectorbuilder.UserBytesForSectorSize((size + size/127) / parts)
+	piece := sectorbuilder.UserBytesForSectorSize(abi.SectorSize((n + n/127) / parts))
 	out := make([]sectorbuilder.PublicPieceInfo, parts)
 	var lk sync.Mutex
 
@@ -93,8 +147,8 @@ func (m *Sealing) ListSectors() ([]SectorInfo, error) {
 	return sectors, nil
 }
 
-func (m *Sealing) GetSectorInfo(sid uint64) (SectorInfo, error) {
+func (m *Sealing) GetSectorInfo(num abi.SectorNumber) (SectorInfo, error) {
 	var out SectorInfo
-	err := m.sectors.Get(sid).Get(&out)
+	err := m.sectors.Get(num).Get(nil)
 	return out, err
 }

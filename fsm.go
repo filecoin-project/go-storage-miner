@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"golang.org/x/xerrors"
 )
 
@@ -19,7 +20,7 @@ func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface
 	return func(ctx statemachine.Context, si SectorInfo) error {
 		err := next(ctx, si)
 		if err != nil {
-			log.Errorf("unhandled sector error (%d): %+v", si.SectorID, err)
+			log.Errorf("unhandled sector error (%d): %+v", si.SectorNum, err)
 			return nil
 		}
 
@@ -102,7 +103,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 	}
 
 	if m.onSectorUpdated != nil {
-		m.onSectorUpdated(state.SectorID, state.State)
+		m.onSectorUpdated(state.SectorNum, state.State)
 	}
 
 	/////
@@ -160,7 +161,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 		return m.handleFinalizeSector, nil
 	case Proving:
 		// TODO: track sector health / expiration
-		log.Infof("Proving sector %d", state.SectorID)
+		log.Infof("Proving sector %d", state.SectorNum)
 
 	// Handled failure modes
 	case SealFailed:
@@ -168,9 +169,9 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 	case PreCommitFailed:
 		return m.handlePreCommitFailed, nil
 	case SealCommitFailed:
-		log.Warnf("sector %d entered unimplemented state 'SealCommitFailed'", state.SectorID)
+		log.Warnf("sector %d entered unimplemented state 'SealCommitFailed'", state.SectorNum)
 	case CommitFailed:
-		log.Warnf("sector %d entered unimplemented state 'CommitFailed'", state.SectorID)
+		log.Warnf("sector %d entered unimplemented state 'CommitFailed'", state.SectorNum)
 
 		// Faults
 	case Faulty:
@@ -182,7 +183,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 	case UndefinedSectorState:
 		log.Error("sector update with undefined state!")
 	case FailedUnrecoverable:
-		log.Errorf("sector %d failed unrecoverably", state.SectorID)
+		log.Errorf("sector %d failed unrecoverably", state.SectorNum)
 	default:
 		log.Errorf("unexpected sector update state: %d", state.State)
 	}
@@ -229,8 +230,8 @@ func (m *Sealing) restartSectors(ctx context.Context) error {
 	}
 
 	for _, sector := range trackedSectors {
-		if err := m.sectors.Send(sector.SectorID, SectorRestart{}); err != nil {
-			log.Errorf("restarting sector %d: %+v", sector.SectorID, err)
+		if err := m.sectors.Send(uint64(sector.SectorNum), SectorRestart{}); err != nil {
+			log.Errorf("restarting sector %d: %+v", sector.SectorNum, err)
 		}
 	}
 
@@ -240,8 +241,8 @@ func (m *Sealing) restartSectors(ctx context.Context) error {
 }
 
 // ForceSectorState puts a sector with given ID into the given state.
-func (m *Sealing) ForceSectorState(ctx context.Context, id uint64, state SectorState) error {
-	return m.sectors.Send(id, SectorForceState{state})
+func (m *Sealing) ForceSectorState(ctx context.Context, num abi.SectorNumber, state SectorState) error {
+	return m.sectors.Send(uint64(num), SectorForceState{state})
 }
 
 func final(events []statemachine.Event, state *SectorInfo) error {
@@ -279,7 +280,7 @@ func planOne(ts ...func() (mut mutator, next SectorState)) func(events []statema
 			}
 
 			if err, iserr := events[0].User.(error); iserr {
-				log.Warnf("sector %d got error event %T: %+v", state.SectorID, events[0].User, err)
+				log.Warnf("sector %d got error event %T: %+v", state.SectorNum, events[0].User, err)
 			}
 
 			events[0].User.(mutator).apply(state)

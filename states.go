@@ -4,35 +4,47 @@ import (
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"golang.org/x/xerrors"
 )
 
 const InteractivePoRepDelay = 8
 
 func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) error {
-	log.Infow("performing filling up rest of the sector...", "sector", sector.SectorID)
+	log.Infow("performing filling up rest of the sector...", "sector", sector.SectorNum)
 
-	var allocated uint64
-	for _, piece := range sector.Pieces {
-		allocated += piece.Size
+	var unpaddedAllocated abi.UnpaddedPieceSize
+	for _, paddedQty := range sector.existingPieces() {
+		unpaddedAllocated += sectorbuilder.UserBytesForSectorSize(abi.SectorSize(paddedQty))
 	}
 
-	ubytes := sectorbuilder.UserBytesForSectorSize(m.sb.SectorSize())
+	unpaddedTotal := sectorbuilder.UserBytesForSectorSize(m.sb.SectorSize())
 
-	if allocated > ubytes {
-		return xerrors.Errorf("too much data in sector: %d > %d", allocated, ubytes)
+	if unpaddedAllocated > unpaddedTotal {
+		return xerrors.Errorf("too much data in sector: %d > %d", unpaddedAllocated, unpaddedTotal)
 	}
 
-	fillerSizes, err := fillersFromRem(ubytes - allocated)
+	fillerSizes, err := fillersFromRem(unpaddedTotal - unpaddedAllocated)
 	if err != nil {
 		return err
 	}
 
 	if len(fillerSizes) > 0 {
-		log.Warnf("Creating %d filler pieces for sector %d", len(fillerSizes), sector.SectorID)
+		log.Warnf("Creating %d filler pieces for sector %d", len(fillerSizes), sector.SectorNum)
 	}
 
-	pieces, err := m.pledgeSector(ctx.Context(), sector.SectorID, sector.existingPieces(), fillerSizes...)
+	fillerPieceSizes := make([]abi.UnpaddedPieceSize, len(fillerSizes))
+	for idx := range fillerSizes {
+		fillerPieceSizes[idx] = fillerSizes[idx]
+	}
+
+	existingPadded := sector.existingPieces()
+	existingUnpadded := make([]abi.UnpaddedPieceSize, len(existingPadded))
+	for idx := range existingPadded {
+		existingUnpadded[idx] = existingPadded[idx].Unpadded()
+	}
+
+	pieces, err := m.pledgeSector(ctx.Context(), sector.SectorNum, existingUnpadded, fillerPieceSizes...)
 	if err != nil {
 		return xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err)
 	}
@@ -41,7 +53,7 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) err
 }
 
 func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) error {
-	if err := m.api.CheckPieces(ctx.Context(), sector.SectorID, sector.Pieces); err != nil { // Sanity check state
+	if err := m.api.CheckPieces(ctx.Context(), sector.SectorNum, sector.Pieces); err != nil { // Sanity check state
 		switch err.EType {
 		case CheckPiecesAPI:
 			log.Errorf("handleUnsealed: api error, not proceeding: %+v", err)
@@ -55,13 +67,18 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 		}
 	}
 
-	log.Infow("performing sector replication...", "sector", sector.SectorID)
+	log.Infow("performing sector replication...", "sector", sector.SectorNum)
 	ticket, err := m.api.GetSealTicket(ctx.Context())
 	if err != nil {
 		return ctx.Send(SectorSealFailed{xerrors.Errorf("getting ticket failed: %w", err)})
 	}
 
-	rspco, err := m.sb.SealPreCommit(ctx.Context(), sector.SectorID, ticket.SB(), sector.pieceInfos())
+	pis, err := sector.pieceInfos()
+	if err != nil {
+		return ctx.Send(SectorSealFailed{xerrors.Errorf("getting piece infos failed: %w", err)})
+	}
+
+	rspco, err := m.sb.SealPreCommit(ctx.Context(), sector.SectorNum, ticket.SB(), pis)
 	if err != nil {
 		return ctx.Send(SectorSealFailed{xerrors.Errorf("seal pre commit failed: %w", err)})
 	}
@@ -91,7 +108,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInf
 		}
 	}
 
-	smsg, err := m.api.SendPreCommitSector(ctx.Context(), sector.SectorID, sector.CommR, sector.Ticket, sector.Pieces...)
+	smsg, err := m.api.SendPreCommitSector(ctx.Context(), sector.SectorNum, sector.CommR, sector.Ticket, sector.Pieces...)
 	if err != nil {
 		return ctx.Send(SectorPreCommitFailed{xerrors.Errorf("failed to send pre-commit message: %w", err)})
 	}
@@ -133,12 +150,17 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) er
 func (m *Sealing) handleCommitting(ctx statemachine.Context, sector SectorInfo) error {
 	log.Info("scheduling seal proof computation...")
 
-	proof, err := m.sb.SealCommit(ctx.Context(), sector.SectorID, sector.Ticket.SB(), sector.Seed.SB(), sector.pieceInfos(), sector.rspco())
+	pis, err := sector.pieceInfos()
+	if err != nil {
+		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("failed to get piece infos for computing seal proof: %w", err)})
+	}
+
+	proof, err := m.sb.SealCommit(ctx.Context(), sector.SectorNum, sector.Ticket.SB(), sector.Seed.SB(), pis, sector.rspco())
 	if err != nil {
 		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("computing seal proof failed: %w", err)})
 	}
 
-	smsg, err := m.api.SendProveCommitSector(ctx.Context(), sector.SectorID, proof, sector.deals()...)
+	smsg, err := m.api.SendProveCommitSector(ctx.Context(), sector.SectorNum, proof, sector.deals()...)
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("error sending prove commit sector: %w", err)})
 	}
@@ -151,7 +173,7 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector SectorInfo) 
 
 func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector SectorInfo) error {
 	if sector.CommitMessage == nil {
-		log.Errorf("sector %d entered commit wait state without a message cid", sector.SectorID)
+		log.Errorf("sector %d entered commit wait state without a message cid", sector.SectorNum)
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("entered commit wait with no commit cid")})
 	}
 
@@ -170,14 +192,14 @@ func (m *Sealing) handleCommitWait(ctx statemachine.Context, sector SectorInfo) 
 func (m *Sealing) handleFinalizeSector(ctx statemachine.Context, sector SectorInfo) error {
 	// TODO: Maybe wait for some finality
 
-	if err := m.sb.FinalizeSector(ctx.Context(), sector.SectorID); err != nil {
+	if err := m.sb.FinalizeSector(ctx.Context(), sector.SectorNum); err != nil {
 		if !xerrors.Is(err, fs.ErrNoSuitablePath) {
 			return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("finalize sector: %w", err)})
 		}
 		log.Warnf("finalize sector: %v", err)
 	}
 
-	if err := m.sb.DropStaged(ctx.Context(), sector.SectorID); err != nil {
+	if err := m.sb.DropStaged(ctx.Context(), sector.SectorNum); err != nil {
 		return ctx.Send(SectorFinalizeFailed{xerrors.Errorf("drop staged: %w", err)})
 	}
 
@@ -188,7 +210,7 @@ func (m *Sealing) handleFaulty(ctx statemachine.Context, sector SectorInfo) erro
 	//// TODO: check if the fault has already been reported, and that this sector is even valid
 	//
 	//// TODO: coalesce faulty sector reporting
-	smsg, err := m.api.SendReportFaults(ctx.Context(), sector.SectorID)
+	smsg, err := m.api.SendReportFaults(ctx.Context(), sector.SectorNum)
 	if err != nil {
 		return xerrors.Errorf("failed to push declare faults message to network: %w", err)
 	}
@@ -207,7 +229,7 @@ func (m *Sealing) handleFaultReported(ctx statemachine.Context, sector SectorInf
 	}
 
 	if exitCode != 0 {
-		log.Errorf("UNHANDLED: declaring sector fault failed (exit=%d, msg=%s) (id: %d)", exitCode, *sector.FaultReportMsg, sector.SectorID)
+		log.Errorf("UNHANDLED: declaring sector fault failed (exit=%d, msg=%s) (num: %d)", exitCode, *sector.FaultReportMsg, sector.SectorNum)
 		return xerrors.Errorf("UNHANDLED: submitting fault declaration failed (exit %d)", exitCode)
 	}
 
