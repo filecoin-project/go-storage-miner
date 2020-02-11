@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"math/bits"
@@ -70,28 +69,19 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 	log.Infof("Publishing deals for %d", sectorNum)
 
-	argBuf := new(bytes.Buffer)
-	if err := arg.MarshalCBOR(argBuf); err != nil {
-		return nil, handle("marshaling PublishStorageDealsParams failed: ", err)
-	}
-
-	mcid, err := m.api.SendMessage(m.worker, builtin.StorageMarketActorAddr, builtin.MethodsMarket.PublishStorageDeals, abi.NewTokenAmount(0), argBuf.Bytes())
+	mcid, err := send(m.api, m.worker, builtin.StorageMarketActorAddr, builtin.MethodsMarket.PublishStorageDeals, abi.NewTokenAmount(0), arg)
 	if err != nil {
 		return nil, handle("failed to send message to storage market actor: ", err)
 	}
 
-	wmsg, err := m.api.WaitMessage(ctx, mcid)
+	ret := new(market.PublishStorageDealsReturn)
+	exitCode, err := wait(ctx, m.api, mcid, ret)
 	if err != nil {
 		return nil, handle("failed to wait for message: ", err)
 	}
 
-	if wmsg.Receipt.ExitCode != 0 {
-		return nil, handle("publishing deal failed: exit %d", wmsg.Receipt.ExitCode)
-	}
-
-	ret := new(market.PublishStorageDealsReturn)
-	if err = ret.UnmarshalCBOR(bytes.NewReader(wmsg.Receipt.Return)); err != nil {
-		return nil, handle("unmarshaling PublishStorageDealsReturn failed: ", err)
+	if exitCode != 0 {
+		return nil, handle("publishing deal failed: exit %d", exitCode)
 	}
 
 	if len(ret.IDs) != len(sizes) {
@@ -150,11 +140,4 @@ func (m *Sealing) PledgeSector() error {
 		}
 	}()
 	return nil
-}
-
-func handle(format string, x ...interface{}) error {
-	err := xerrors.Errorf(format, x)
-	log.Error(err)
-
-	return err
 }
