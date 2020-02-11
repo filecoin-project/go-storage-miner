@@ -25,8 +25,4 @@ require (
 
 replace github.com/golangci/golangci-lint => github.com/golangci/golangci-lint v1.18.0
 
-replace github.com/filecoin-project/filecoin-ffi => /Users/erinswenson-healey/dev/filecoin-ffi
-
-replace github.com/filecoin-project/go-sectorbuilder => /Users/erinswenson-healey/dev/go-sectorbuilder
-
-replace github.com/filecoin-project/go-padreader => /Users/erinswenson-healey/dev/go-padreader
+replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi

@@ -5,11 +5,10 @@ import (
 	"errors"
 	"io"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
-
 	ffi "github.com/filecoin-project/filecoin-ffi"
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"golang.org/x/xerrors"

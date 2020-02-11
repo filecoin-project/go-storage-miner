@@ -5,14 +5,12 @@ import (
 	"io"
 	"sync"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
-
-	"github.com/filecoin-project/specs-actors/actors/abi"
-
 	"github.com/filecoin-project/go-address"
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/namespace"
 	"golang.org/x/xerrors"

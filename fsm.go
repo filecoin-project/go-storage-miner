@@ -6,9 +6,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
-
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	"golang.org/x/xerrors"
 )
 
