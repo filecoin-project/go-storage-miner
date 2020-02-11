@@ -40,6 +40,11 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 	log.Infof("Pledge %d, contains %+v", sectorNum, existingPieceSizes)
 
+	waddr, err := m.api.GetMinerWorkerAddressFromChainHead(ctx, m.maddr)
+	if err != nil {
+		return nil, handle("failed to get worker address: ", err)
+	}
+
 	arg := &market.PublishStorageDealsParams{
 		Deals: make([]market.ClientDealProposal, len(sizes)),
 	}
@@ -52,7 +57,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 		sdp := market.ClientDealProposal{
 			Proposal: market.DealProposal{
-				Client:               m.worker,
+				Client:               waddr,
 				ClientCollateral:     abi.NewTokenAmount(0),
 				EndEpoch:             abi.ChainEpoch(0),
 				PieceCID:             commcid.PieceCommitmentV1ToCID(commP[:]),
@@ -69,7 +74,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 	log.Infof("Publishing deals for %d", sectorNum)
 
-	mcid, err := send(m.api, m.worker, builtin.StorageMarketActorAddr, builtin.MethodsMarket.PublishStorageDeals, abi.NewTokenAmount(0), arg)
+	mcid, err := send(m.api, waddr, builtin.StorageMarketActorAddr, builtin.MethodsMarket.PublishStorageDeals, abi.NewTokenAmount(0), arg)
 	if err != nil {
 		return nil, handle("failed to send message to storage market actor: ", err)
 	}

@@ -27,15 +27,11 @@ import (
 const DefaultDealID = 42
 const DefaultSectorID = 42
 const UserBytesOneKiBSector = 1016 // also known as "unpadded" bytes
-const PaddedBytesOneKiBSector = 1024
 
 func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	ctx := context.Background()
 
 	maddr, err := address.NewIDAddress(55)
-	require.NoError(t, err)
-
-	waddr, err := address.NewIDAddress(66)
 	require.NoError(t, err)
 
 	// a sequence of sector state transitions we expect to observe
@@ -49,7 +45,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -75,9 +71,6 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	ctx := context.Background()
 
 	maddr, err := address.NewIDAddress(55)
-	require.NoError(t, err)
-
-	waddr, err := address.NewIDAddress(66)
 	require.NoError(t, err)
 
 	// we'll assert the contents of this slice at the end of the test
@@ -143,7 +136,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(storage.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, waddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -174,9 +167,6 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
-	waddr, err := address.NewIDAddress(66)
-	require.NoError(t, err)
-
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
@@ -195,7 +185,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(storage.PreCommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -220,9 +210,6 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
-	waddr, err := address.NewIDAddress(66)
-	require.NoError(t, err)
-
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
@@ -243,7 +230,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -268,9 +255,6 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
-	waddr, err := address.NewIDAddress(66)
-	require.NoError(t, err)
-
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
@@ -292,7 +276,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		then(storage.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, waddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {

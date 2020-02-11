@@ -20,6 +20,10 @@ type NodeAPI interface {
 	// block.
 	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
 
+	// GetMinerWorkerAddressFromChainHead produces the worker address associated
+	// with the provider miner address at the current head.
+	GetMinerWorkerAddressFromChainHead(context.Context, address.Address) (address.Address, error)
+
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
 	SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket SealTicket, pieces ...Piece) (cid.Cid, error)

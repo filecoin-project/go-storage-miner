@@ -23,6 +23,7 @@ import (
 type fakeNode struct {
 	checkPieces              func(ctx context.Context, sectorNum abi.SectorNumber, pieces []storage.Piece) *storage.CheckPiecesError
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket storage.SealTicket) *storage.CheckSealingError
+	getMinerWorkerAddress    func(ctx context.Context, maddr address.Address) (address.Address, error)
 	getReplicaCommitmentByID func(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
@@ -49,6 +50,9 @@ func newFakeNode() *fakeNode {
 		},
 		checkSealing: func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket storage.SealTicket) *storage.CheckSealingError {
 			return nil
+		},
+		getMinerWorkerAddress: func(ctx context.Context, maddr address.Address) (a address.Address, err error) {
+			return address.NewIDAddress(42)
 		},
 		getReplicaCommitmentByID: func(ctx context.Context, sectorNum abi.SectorNumber) ([]byte, bool, error) {
 			return nil, false, nil
@@ -125,6 +129,10 @@ func (f *fakeNode) SendProveCommitSector(ctx context.Context, sectorNum abi.Sect
 
 func (f *fakeNode) WaitForProveCommitSector(ctx context.Context, msg cid.Cid) (exitCode uint8, err error) {
 	return f.waitForProveCommitSector(ctx, msg)
+}
+
+func (f *fakeNode) GetMinerWorkerAddressFromChainHead(ctx context.Context, maddr address.Address) (address.Address, error) {
+	return f.getMinerWorkerAddress(ctx, maddr)
 }
 
 func (f *fakeNode) GetSealTicket(ctx context.Context) (storage.SealTicket, error) {

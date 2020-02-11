@@ -21,8 +21,7 @@ const SectorStorePrefix = "/sectors"
 type Sealing struct {
 	api NodeAPI
 
-	maddr  address.Address
-	worker address.Address
+	maddr address.Address
 
 	sb      SectorBuilderAPI
 	sectors *statemachine.StateGroup
@@ -37,16 +36,15 @@ type Sealing struct {
 	runCompleteWg sync.WaitGroup
 }
 
-func NewSealing(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address) *Sealing {
-	return NewSealingWithOnSectorUpdated(api, sb, ds, worker, maddr, nil)
+func NewSealing(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, maddr address.Address) *Sealing {
+	return NewSealingWithOnSectorUpdated(api, sb, ds, maddr, nil)
 }
 
-func NewSealingWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, worker address.Address, maddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
+func NewSealingWithOnSectorUpdated(api NodeAPI, sb SectorBuilderAPI, ds datastore.Batching, maddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
 		sb:              sb,
-		worker:          worker,
 		onSectorUpdated: onSectorUpdated,
 	}
 

@@ -35,7 +35,6 @@ var _ SectorBuilderAPI = new(sectorbuilder.SectorBuilder)
 type Miner struct {
 	api     NodeAPI
 	maddr   address.Address
-	worker  address.Address
 	sb      SectorBuilderAPI
 	ds      datastore.Batching
 	sealing *Sealing
@@ -45,15 +44,14 @@ type Miner struct {
 	onSectorUpdated func(abi.SectorNumber, SectorState)
 }
 
-func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr, waddr address.Address) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, waddr, nil)
+func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr address.Address) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr, waddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) (*Miner, error) {
 	return &Miner{
 		api:             api,
 		maddr:           maddr,
-		worker:          waddr,
 		sb:              sb,
 		ds:              ds,
 		sealing:         nil,
@@ -110,9 +108,9 @@ func (m *Miner) Run(ctx context.Context) error {
 	}
 
 	if m.onSectorUpdated != nil {
-		m.sealing = NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.worker, m.maddr, m.onSectorUpdated)
+		m.sealing = NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
 	} else {
-		m.sealing = NewSealing(m.api, m.sb, m.ds, m.worker, m.maddr)
+		m.sealing = NewSealing(m.api, m.sb, m.ds, m.maddr)
 	}
 
 	go m.sealing.Run(ctx) // nolint: errcheck
@@ -135,11 +133,12 @@ func (m *Miner) Stop(ctx context.Context) error {
 }
 
 func (m *Miner) runPreflightChecks(ctx context.Context) error {
-	if m.worker == address.Undef {
-		return xerrors.New("miner worker address has not been set")
+	waddr, err := m.api.GetMinerWorkerAddressFromChainHead(ctx, m.maddr)
+	if err != nil {
+		return xerrors.Errorf("error acquiring worker address: %w", err)
 	}
 
-	has, err := m.api.WalletHas(ctx, m.worker)
+	has, err := m.api.WalletHas(ctx, waddr)
 	if err != nil {
 		return xerrors.Errorf("failed to check wallet for worker key: %w", err)
 	}
@@ -148,6 +147,7 @@ func (m *Miner) runPreflightChecks(ctx context.Context) error {
 		return errors.New("key for worker not found in local wallet")
 	}
 
-	log.Infof("starting up miner %s, worker addr %s", m.maddr, m.worker)
+	log.Infof("starting up miner %s, worker addr %s", m.maddr, waddr)
+
 	return nil
 }
