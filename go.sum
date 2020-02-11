@@ -38,6 +38,8 @@ github.com/filecoin-project/go-fil-commcid v0.0.0-20200208005934-2b8bd03caca5 h1
 github.com/filecoin-project/go-fil-commcid v0.0.0-20200208005934-2b8bd03caca5/go.mod h1:JbkIgFF/Z9BDlvrJO1FuKkaWsH673/UdFaiVS6uIHlA=
 github.com/filecoin-project/go-padreader v0.0.0-20200129213049-ea73e2aaabd1 h1:xRRP7Uo15XpZHl3SQvxqFVw/YWyAFgoWRwXlI8PNZaI=
 github.com/filecoin-project/go-padreader v0.0.0-20200129213049-ea73e2aaabd1/go.mod h1:Bu34RWAifHqV29tAx4S8TxMa7h42fkLlXAQUl29DNQs=
+github.com/filecoin-project/go-padreader v0.0.0-20200210211231-548257017ca6 h1:92PET+sx1Hb4W/8CgFwGuxaKbttwY+UNspYZTvXY0vs=
+github.com/filecoin-project/go-padreader v0.0.0-20200210211231-548257017ca6/go.mod h1:0HgYnrkeSU4lu1p+LEOeDpFsNBssa0OGGriWdA4hvaE=
 github.com/filecoin-project/go-paramfetch v0.0.0-20200102181131-b20d579f2878 h1:YicJT9xhPzZ1SBGiJFNUCkfwqK/G9vFyY1ytKBSjNJA=
 github.com/filecoin-project/go-paramfetch v0.0.0-20200102181131-b20d579f2878/go.mod h1:40kI2Gv16mwcRsHptI3OAV4nlOEU7wVDc4RgMylNFjU=
 github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200131010043-6b57024f839c h1:qv1tEab/IklFknEM8VK2WgxxM7aZ5/uwm5xFgvHTp4A=

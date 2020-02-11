@@ -7,7 +7,7 @@ require (
 	github.com/filecoin-project/go-address v0.0.0-20200107215422-da8eea2842b5
 	github.com/filecoin-project/go-cbor-util v0.0.0-20191219014500-08c40a1e63a2
 	github.com/filecoin-project/go-fil-commcid v0.0.0-20200208005934-2b8bd03caca5
-	github.com/filecoin-project/go-padreader v0.0.0-20200129213049-ea73e2aaabd1
+	github.com/filecoin-project/go-padreader v0.0.0-20200210211231-548257017ca6
 	github.com/filecoin-project/go-sectorbuilder v0.0.2-0.20200211164318-76f24b9797d4
 	github.com/filecoin-project/go-statemachine v0.0.0-20200129214539-c78c5f7e9f9c
 	github.com/filecoin-project/specs-actors v0.0.0-20200210130641-2d1fbd8672cf
