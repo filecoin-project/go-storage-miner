@@ -75,7 +75,7 @@ func (m *Sealing) Stop(ctx context.Context) error {
 }
 
 func (m *Sealing) AllocatePiece(size abi.UnpaddedPieceSize) (sectorNum abi.SectorNumber, offset uint64, err error) {
-	if abi.UnpaddedPieceSize(padreader.PaddedSize(uint64(size))) != size {
+	if padreader.PaddedSize(uint64(size)) != size {
 		return 0, 0, xerrors.Errorf("cannot allocate unpadded piece")
 	}
 

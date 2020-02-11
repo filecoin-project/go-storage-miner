@@ -35,7 +35,7 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) err
 
 	fillerPieceSizes := make([]abi.UnpaddedPieceSize, len(fillerSizes))
 	for idx := range fillerSizes {
-		fillerPieceSizes[idx] = abi.UnpaddedPieceSize(fillerSizes[idx])
+		fillerPieceSizes[idx] = fillerSizes[idx]
 	}
 
 	existingPadded := sector.existingPieces()

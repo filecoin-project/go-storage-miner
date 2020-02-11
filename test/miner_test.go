@@ -92,7 +92,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			case builtin.MethodsMarket.PublishStorageDeals:
 				arg := new(market.PublishStorageDealsParams)
 				if err = arg.UnmarshalCBOR(bytes.NewReader(params)); err != nil {
-					panic(fmt.Sprintf("unmarshaling PublishStorageDealsParams failed: %w", err))
+					panic(fmt.Sprintf("unmarshaling PublishStorageDealsParams failed: %s", err))
 				}
 
 				selfDealPieceSizes = append(selfDealPieceSizes, arg.Deals[0].Proposal.PieceSize.Unpadded())
@@ -111,7 +111,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 			buf := new(bytes.Buffer)
 			if err := ret.MarshalCBOR(buf); err != nil {
-				panic(fmt.Sprintf("failed to marshal PublishStorageDealsReturn CBOR bytes: %w", err))
+				panic(fmt.Sprintf("failed to marshal PublishStorageDealsReturn CBOR bytes: %s", err))
 			}
 
 			return storage.MsgWait{

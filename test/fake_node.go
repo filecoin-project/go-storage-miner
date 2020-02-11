@@ -34,7 +34,6 @@ type fakeNode struct {
 	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
 	waitMessage              func(ctx context.Context, msg cid.Cid) (storage.MsgWait, error)
 	walletHas                func(ctx context.Context, addr address.Address) (bool, error)
-	msgCidToReturn           map[cid.Cid]runtime.CBORMarshaler
 }
 
 func newFakeNode() *fakeNode {
@@ -98,7 +97,7 @@ func newFakeNode() *fakeNode {
 
 			buf := new(bytes.Buffer)
 			if err := v.MarshalCBOR(buf); err != nil {
-				panic(fmt.Sprintf("test failed to marshal CBOR bytes: %w", err))
+				panic(fmt.Sprintf("test failed to marshal CBOR bytes: %s", err))
 			}
 
 			return storage.MsgWait{

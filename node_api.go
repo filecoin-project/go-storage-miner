@@ -12,8 +12,12 @@ type FinalityReached struct{}
 type SeedInvalidated struct{}
 
 type NodeAPI interface {
+	// SendMessage creates and sends a blockchain message with the provided
+	// arguments and returns its identity.
 	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
 
+	// WaitMessage blocks until a message with provided CID is mined into a
+	// block.
 	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
