@@ -1,57 +1,12 @@
-package storage
+package sealing
 
 import (
-	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 )
-
-type SealTicket struct {
-	BlockHeight uint64
-	TicketBytes []byte
-}
-
-func (t *SealTicket) SB() sectorbuilder.SealTicket {
-	out := sectorbuilder.SealTicket{BlockHeight: t.BlockHeight}
-	copy(out.TicketBytes[:], t.TicketBytes)
-	return out
-}
-
-type SealSeed struct {
-	BlockHeight uint64
-	TicketBytes []byte
-}
-
-func (t *SealSeed) SB() sectorbuilder.SealSeed {
-	out := sectorbuilder.SealSeed{BlockHeight: t.BlockHeight}
-	copy(out.TicketBytes[:], t.TicketBytes)
-	return out
-}
-
-func (t *SealSeed) Equals(o *SealSeed) bool {
-	return string(t.TicketBytes) == string(o.TicketBytes) && t.BlockHeight == o.BlockHeight
-}
-
-type Piece struct {
-	DealID   abi.DealID
-	Size     abi.PaddedPieceSize
-	PieceCID cid.Cid
-}
-
-func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo, err error) {
-	out.Size = p.Size.Unpadded()
-
-	commP, err := commcid.CIDToPieceCommitmentV1(p.PieceCID)
-	if err != nil {
-		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("failed to map CID to CommP: ", err)
-	}
-
-	copy(out.CommP[:], commP)
-
-	return out, nil
-}
 
 type Log struct {
 	Timestamp uint64
@@ -70,18 +25,18 @@ type SectorInfo struct {
 
 	// Packing
 
-	Pieces []Piece
+	Pieces []node.Piece
 
 	// PreCommit
 	CommD  []byte
 	CommR  []byte
 	Proof  []byte
-	Ticket SealTicket
+	Ticket node.SealTicket
 
 	PreCommitMessage *cid.Cid
 
 	// WaitSeed
-	Seed SealSeed
+	Seed node.SealSeed
 
 	// Committing
 	CommitMessage *cid.Cid
@@ -98,7 +53,7 @@ type SectorInfo struct {
 func (t *SectorInfo) pieceInfos() ([]sectorbuilder.PublicPieceInfo, error) {
 	out := make([]sectorbuilder.PublicPieceInfo, len(t.Pieces))
 	for i, piece := range t.Pieces {
-		ppi, err := piece.ppi()
+		ppi, err := piece.SB()
 		if err != nil {
 			return nil, xerrors.Errorf("failed to map to PublicPieceInfo: ", err)
 		}

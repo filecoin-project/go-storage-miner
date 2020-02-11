@@ -53,3 +53,7 @@ clean:
 	rm -rf $(CLEAN)
 	-$(MAKE) -C $(FFI_PATH) clean
 .PHONY: clean
+
+type-gen:
+	go run ./gen/main.go
+.PHONY: type-gen

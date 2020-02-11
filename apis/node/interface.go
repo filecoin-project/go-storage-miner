@@ -1,4 +1,4 @@
-package storage
+package node
 
 import (
 	"context"
@@ -8,10 +8,7 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-type FinalityReached struct{}
-type SeedInvalidated struct{}
-
-type NodeAPI interface {
+type Interface interface {
 	// SendMessage creates and sends a blockchain message with the provided
 	// arguments and returns its identity.
 	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
@@ -69,85 +66,4 @@ type NodeAPI interface {
 	// WalletHas checks the wallet for the key associated with the provided
 	// address.
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
-}
-
-type MsgWait struct {
-	Receipt MessageReceipt
-	Height  abi.ChainEpoch
-}
-
-type MessageReceipt struct {
-	ExitCode uint8
-	Return   []byte
-	GasUsed  abi.TokenAmount
-}
-
-type PieceInfo struct {
-	Size  uint64
-	CommP [32]byte
-}
-
-type CheckPiecesErrorType = uint64
-
-const (
-	UndefinedCheckPiecesErrorType CheckPiecesErrorType = iota
-	CheckPiecesAPI
-	CheckPiecesInvalidDeals
-	CheckPiecesExpiredDeals
-)
-
-type CheckPiecesError struct {
-	inner error
-	EType CheckPiecesErrorType
-}
-
-func NewCheckPiecesError(inner error, etype CheckPiecesErrorType) *CheckPiecesError {
-	return &CheckPiecesError{inner: inner, EType: etype}
-}
-
-func (c CheckPiecesError) Error() string {
-	return c.inner.Error()
-}
-
-type CheckSealingErrorType = uint64
-
-const (
-	UndefinedCheckSealingErrorType CheckSealingErrorType = iota
-	CheckSealingAPI
-	CheckSealingBadCommD
-	CheckSealingExpiredTicket
-)
-
-type CheckSealingError struct {
-	inner error
-	EType CheckSealingErrorType
-}
-
-func NewCheckSealingError(inner error, etype CheckSealingErrorType) *CheckSealingError {
-	return &CheckSealingError{inner: inner, EType: etype}
-}
-
-func (c CheckSealingError) Error() string {
-	return c.inner.Error()
-}
-
-type GetSealSeedErrorType = uint64
-
-const (
-	UndefinedGetSealSeedErrorType GetSealSeedErrorType = iota
-	GetSealSeedFailedError
-	GetSealSeedFatalError
-)
-
-type GetSealSeedError struct {
-	inner error
-	EType GetSealSeedErrorType
-}
-
-func NewGetSealSeedError(inner error, etype GetSealSeedErrorType) *GetSealSeedError {
-	return &GetSealSeedError{inner: inner, EType: etype}
-}
-
-func (c GetSealSeedError) Error() string {
-	return c.inner.Error()
 }

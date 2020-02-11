@@ -1,9 +1,10 @@
-package storage
+package sealing
 
 import (
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"golang.org/x/xerrors"
 )
@@ -55,12 +56,12 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) err
 func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) error {
 	if err := m.api.CheckPieces(ctx.Context(), sector.SectorNum, sector.Pieces); err != nil { // Sanity check state
 		switch err.EType {
-		case CheckPiecesAPI:
+		case node.CheckPiecesAPI:
 			log.Errorf("handleUnsealed: api error, not proceeding: %+v", err)
 			return nil
-		case CheckPiecesInvalidDeals:
+		case node.CheckPiecesInvalidDeals:
 			return ctx.Send(SectorPackingFailed{xerrors.Errorf("invalid deals in sector: %w", err)})
-		case CheckPiecesExpiredDeals: // Probably not much we can do here, maybe re-pack the sector?
+		case node.CheckPiecesExpiredDeals: // Probably not much we can do here, maybe re-pack the sector?
 			return ctx.Send(SectorPackingFailed{xerrors.Errorf("expired deals in sector: %w", err)})
 		default:
 			return xerrors.Errorf("checkPieces sanity check error: %w", err)
@@ -86,7 +87,7 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 	return ctx.Send(SectorSealed{
 		commD: rspco.CommD[:],
 		commR: rspco.CommR[:],
-		ticket: SealTicket{
+		ticket: node.SealTicket{
 			BlockHeight: ticket.BlockHeight,
 			TicketBytes: ticket.TicketBytes[:],
 		},
@@ -96,12 +97,12 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInfo) error {
 	if err := m.api.CheckSealing(ctx.Context(), sector.CommD, sector.deals(), sector.Ticket); err != nil {
 		switch err.EType {
-		case CheckSealingAPI:
+		case node.CheckSealingAPI:
 			log.Errorf("handlePreCommitting: api error, not proceeding: %+v", err)
 			return nil
-		case CheckSealingBadCommD: // TODO: Should this just back to packing? (not really needed since handleUnsealed will do that too)
+		case node.CheckSealingBadCommD: // TODO: Should this just back to packing? (not really needed since handleUnsealed will do that too)
 			return ctx.Send(SectorSealFailed{xerrors.Errorf("bad CommD error: %w", err)})
-		case CheckSealingExpiredTicket:
+		case node.CheckSealingExpiredTicket:
 			return ctx.Send(SectorSealFailed{xerrors.Errorf("ticket expired error: %w", err)})
 		default:
 			return xerrors.Errorf("checkSeal sanity check error: %w", err)
@@ -127,13 +128,13 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) er
 			log.Error("error waiting for precommit", err)
 
 			switch err.EType {
-			case GetSealSeedFailedError:
-				return ctx.Send(SectorPreCommitFailed{err.inner})
-			case GetSealSeedFatalError:
-				return ctx.Send(SectorFatalError{err.inner})
+			case node.GetSealSeedFailedError:
+				return ctx.Send(SectorPreCommitFailed{err.Unwrap()})
+			case node.GetSealSeedFatalError:
+				return ctx.Send(SectorFatalError{err.Unwrap()})
 			default:
 				log.Error("unhandled error from GetSealSeed: %+v", err)
-				return ctx.Send(SectorFatalError{err.inner})
+				return ctx.Send(SectorFatalError{err.Unwrap()})
 			}
 		case <-invalidated:
 			log.Warn("revert in interactive commit sector step")
