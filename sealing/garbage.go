@@ -1,4 +1,4 @@
-package storage
+package sealing
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"math/bits"
 	"math/rand"
 	"runtime"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
@@ -33,7 +35,7 @@ func (m *Sealing) pledgeReader(size abi.UnpaddedPieceSize, parts uint64) io.Read
 	return io.MultiReader(readers...)
 }
 
-func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]Piece, error) {
+func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]node.Piece, error) {
 	if len(sizes) == 0 {
 		return nil, nil
 	}
@@ -93,7 +95,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		return nil, handle("got unexpected number of DealIDs from PublishStorageDeals")
 	}
 
-	out := make([]Piece, len(sizes))
+	out := make([]node.Piece, len(sizes))
 
 	for i, size := range sizes {
 		ppi, err := m.sb.AddPiece(ctx, size, sectorNum, m.pledgeReader(size, uint64(runtime.NumCPU())), existingPieceSizes)
@@ -103,7 +105,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 		existingPieceSizes = append(existingPieceSizes, size)
 
-		out[i] = Piece{
+		out[i] = node.Piece{
 			DealID:   ret.IDs[i],
 			Size:     ppi.Size.Padded(),
 			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
@@ -133,7 +135,7 @@ func (m *Sealing) PledgeSector() error {
 			return
 		}
 
-		ppi, err := pieces[0].ppi()
+		ppi, err := pieces[0].SB()
 		if err != nil {
 			log.Errorf("%+v", err)
 			return

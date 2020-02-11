@@ -1,22 +1,24 @@
-package storage
+package sealing
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSectorInfoSelialization(t *testing.T) {
+func TestSectorInfoSerialization(t *testing.T) {
 	var commP [32]byte
 
 	si := &SectorInfo{
 		State:     123,
 		SectorNum: 234,
 		Nonce:     345,
-		Pieces: []Piece{{
+		Pieces: []node.Piece{{
 			DealID:   1234,
 			Size:     5,
 			PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
@@ -24,12 +26,12 @@ func TestSectorInfoSelialization(t *testing.T) {
 		CommD: []byte{32, 4},
 		CommR: nil,
 		Proof: nil,
-		Ticket: SealTicket{
+		Ticket: node.SealTicket{
 			BlockHeight: 345,
 			TicketBytes: []byte{87, 78, 7, 87},
 		},
 		PreCommitMessage: nil,
-		Seed:             SealSeed{},
+		Seed:             node.SealSeed{},
 		CommitMessage:    nil,
 		FaultReportMsg:   nil,
 		LastErr:          "hi",

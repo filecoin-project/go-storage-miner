@@ -1,7 +1,9 @@
-package storage
+package sealing
 
 import (
 	"testing"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	"github.com/filecoin-project/go-statemachine"
 	logging "github.com/ipfs/go-log/v2"
@@ -73,12 +75,12 @@ func TestSeedRevert(t *testing.T) {
 	m.planSingle(SectorSeedReady{})
 	require.Equal(m.t, m.state.State, Committing)
 
-	_, err := m.s.plan([]statemachine.Event{{SectorSeedReady{seed: SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
+	_, err := m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
 	require.NoError(t, err)
 	require.Equal(m.t, m.state.State, Committing)
 
 	// not changing the seed this time
-	_, err = m.s.plan([]statemachine.Event{{SectorSeedReady{seed: SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
+	_, err = m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
 	require.Equal(m.t, m.state.State, CommitWait)
 
 	m.planSingle(SectorProving{})

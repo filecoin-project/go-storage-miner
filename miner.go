@@ -5,9 +5,12 @@ import (
 	"errors"
 	"io"
 
-	ffi "github.com/filecoin-project/filecoin-ffi"
+	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-storage-miner/apis/sectorbuilder"
+
+	sealing2 "github.com/filecoin-project/go-storage-miner/sealing"
+
 	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
@@ -16,39 +19,23 @@ import (
 
 var log = logging.Logger("storageminer")
 
-// SectorBuilderAPI provides a method set used by the miner in order to interact
-// with the go-sectorbuilder package. This method set exposes a subset of the
-// methods defined on the sectorbuilder.Interface interface.
-type SectorBuilderAPI interface {
-	AcquireSectorNumber() (abi.SectorNumber, error)
-	AddPiece(ctx context.Context, pieceSize abi.UnpaddedPieceSize, sectorNumber abi.SectorNumber, file io.Reader, existingPieceSizes []abi.UnpaddedPieceSize) (sectorbuilder.PublicPieceInfo, error)
-	DropStaged(context.Context, abi.SectorNumber) error
-	FinalizeSector(context.Context, abi.SectorNumber) error
-	RateLimit() func()
-	SealCommit(ctx context.Context, sectorNumber abi.SectorNumber, ticket ffi.SealTicket, seed ffi.SealSeed, pieces []sectorbuilder.PublicPieceInfo, rspco sectorbuilder.RawSealPreCommitOutput) (proof []byte, err error)
-	SealPreCommit(ctx context.Context, sectorNumber abi.SectorNumber, ticket ffi.SealTicket, pieces []sectorbuilder.PublicPieceInfo) (sectorbuilder.RawSealPreCommitOutput, error)
-	SectorSize() abi.SectorSize
-}
-
-var _ SectorBuilderAPI = new(sectorbuilder.SectorBuilder)
-
 type Miner struct {
-	api     NodeAPI
+	api     node.Interface
 	maddr   address.Address
-	sb      SectorBuilderAPI
+	sb      sectorbuilder.Interface
 	ds      datastore.Batching
-	sealing *Sealing
+	sealing *sealing2.Sealing
 
 	// onSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
-	onSectorUpdated func(abi.SectorNumber, SectorState)
+	onSectorUpdated func(abi.SectorNumber, sealing2.SectorState)
 }
 
-func NewMiner(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr address.Address) (*Miner, error) {
+func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address) (*Miner, error) {
 	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBuilderAPI, maddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, onSectorUpdated func(abi.SectorNumber, sealing2.SectorState)) (*Miner, error) {
 	return &Miner{
 		api:             api,
 		maddr:           maddr,
@@ -57,45 +44,6 @@ func NewMinerWithOnSectorUpdated(api NodeAPI, ds datastore.Batching, sb SectorBu
 		sealing:         nil,
 		onSectorUpdated: onSectorUpdated,
 	}, nil
-}
-
-// AllocatePiece produces information about where a piece of a given size can
-// be written.
-//
-// TODO: This signature doesn't make much sense. Returning a sector ID here
-// means that we won't have the ability to move the piece around (i.e. do
-// intelligent bin packing) after allocating. -- @laser
-func (m *Miner) AllocatePiece(size abi.UnpaddedPieceSize) (sectorNum abi.SectorNumber, offset uint64, err error) {
-	return m.sealing.AllocatePiece(size)
-}
-
-// AllocateSectorID allocates a new sector ID.
-func (m *Miner) AllocateSectorID() (sectorNum abi.SectorNumber, err error) {
-	return m.sb.AcquireSectorNumber()
-}
-
-// ForceSectorState puts a sector with given ID into the given state.
-func (m *Miner) ForceSectorState(ctx context.Context, num abi.SectorNumber, state SectorState) error {
-	return m.sealing.ForceSectorState(ctx, num, state)
-}
-
-// GetSectorInfo produces information about a sector managed by this storage
-// miner, or an error if the miner does not manage a sector with the
-// provided identity.
-func (m *Miner) GetSectorInfo(sectorNum abi.SectorNumber) (SectorInfo, error) {
-	return m.sealing.GetSectorInfo(sectorNum)
-}
-
-// ListSectors lists all the sectors managed by this storage miner (sealed
-// or otherwise).
-func (m *Miner) ListSectors() ([]SectorInfo, error) {
-	return m.sealing.ListSectors()
-}
-
-// PledgeSector allocates a new sector, fills it with self-deal junk, and
-// seals that sector.
-func (m *Miner) PledgeSector() error {
-	return m.sealing.PledgeSector()
 }
 
 // Run starts the Miner, which causes it (and its collaborating objects) to
@@ -108,9 +56,9 @@ func (m *Miner) Run(ctx context.Context) error {
 	}
 
 	if m.onSectorUpdated != nil {
-		m.sealing = NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
+		m.sealing = sealing2.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
 	} else {
-		m.sealing = NewSealing(m.api, m.sb, m.ds, m.maddr)
+		m.sealing = sealing2.NewSealing(m.api, m.sb, m.ds, m.maddr)
 	}
 
 	go m.sealing.Run(ctx) // nolint: errcheck

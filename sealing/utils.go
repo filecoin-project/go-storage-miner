@@ -1,4 +1,4 @@
-package storage
+package sealing
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"math/bits"
 	"math/rand"
 	"sync"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	"github.com/filecoin-project/go-address"
 	runtime2 "github.com/filecoin-project/specs-actors/actors/runtime"
@@ -23,7 +25,7 @@ type sender interface {
 }
 
 type waiter interface {
-	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
+	WaitMessage(context.Context, cid.Cid) (node.MsgWait, error)
 }
 
 func send(api sender, from, to address.Address, method abi.MethodNum, value abi.TokenAmount, input runtime2.CBORMarshaler) (cid.Cid, error) {

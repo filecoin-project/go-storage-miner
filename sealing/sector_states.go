@@ -1,4 +1,4 @@
-package storage
+package sealing
 
 // alias because cbor-gen doesn't like non-alias types
 type SectorState = uint64

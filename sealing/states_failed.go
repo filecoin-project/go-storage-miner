@@ -1,8 +1,10 @@
-package storage
+package sealing
 
 import (
 	"bytes"
 	"time"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	"github.com/filecoin-project/go-statemachine"
 	"golang.org/x/xerrors"
@@ -56,12 +58,12 @@ func (m *Sealing) handleSealFailed(ctx statemachine.Context, sector SectorInfo) 
 func (m *Sealing) handlePreCommitFailed(ctx statemachine.Context, sector SectorInfo) error {
 	if err := m.api.CheckSealing(ctx.Context(), sector.CommD, sector.deals(), sector.Ticket); err != nil {
 		switch err.EType {
-		case CheckSealingAPI:
+		case node.CheckSealingAPI:
 			log.Errorf("handlePreCommitFailed: api error, not proceeding: %+v", err)
 			return nil
-		case CheckSealingBadCommD: // TODO: Should this just back to packing? (not really needed since handleUnsealed will do that too)
+		case node.CheckSealingBadCommD: // TODO: Should this just back to packing? (not really needed since handleUnsealed will do that too)
 			return ctx.Send(SectorSealFailed{xerrors.Errorf("bad CommD error: %w", err)})
-		case CheckSealingExpiredTicket:
+		case node.CheckSealingExpiredTicket:
 			return ctx.Send(SectorSealFailed{xerrors.Errorf("ticket expired error: %w", err)})
 		default:
 			return xerrors.Errorf("checkSeal sanity check error: %w", err)
