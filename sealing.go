@@ -106,18 +106,13 @@ func (m *Sealing) newSector(ctx context.Context, sectorNum abi.SectorNumber, dea
 
 	log.Infof("Start sealing %d", sectorNum)
 
-	pieceCid, err := commcid.CommitmentToCID(ppi.CommP[:], commcid.FC_UNSEALED_V1)
-	if err != nil {
-		return handle("could not create PieceCID from CommP: ", err)
-	}
-
 	return m.sectors.Send(uint64(sectorNum), SectorStart{
 		num: sectorNum,
 		pieces: []Piece{
 			{
 				DealID:   dealID,
 				Size:     ppi.Size.Padded(),
-				PieceCID: pieceCid,
+				PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
 			},
 		},
 	})

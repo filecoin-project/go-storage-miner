@@ -43,13 +43,9 @@ type Piece struct {
 func (p *Piece) ppi() (out sectorbuilder.PublicPieceInfo, err error) {
 	out.Size = p.Size.Unpadded()
 
-	commP, code, err := commcid.CIDToCommitment(p.PieceCID)
+	commP, err := commcid.CIDToPieceCommitmentV1(p.PieceCID)
 	if err != nil {
 		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("failed to map CID to CommP: ", err)
-	}
-
-	if code != commcid.FC_UNSEALED_V1 {
-		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("unhandled hashing algorithm: expected %d and got %d", commcid.FC_UNSEALED_V1, code)
 	}
 
 	copy(out.CommP[:], commP)

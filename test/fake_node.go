@@ -3,8 +3,13 @@ package test
 import (
 	"bytes"
 	"context"
+	"fmt"
+
+	"github.com/filecoin-project/specs-actors/actors/builtin"
 
 	"github.com/filecoin-project/specs-actors/actors/builtin/market"
+
+	"github.com/filecoin-project/specs-actors/actors/runtime"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
@@ -21,17 +26,24 @@ type fakeNode struct {
 	getReplicaCommitmentByID func(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan storage.SealSeed, <-chan storage.SeedInvalidated, <-chan storage.FinalityReached, <-chan *storage.GetSealSeedError)
 	getSealTicket            func(context.Context) (storage.SealTicket, error)
+	sendMessage              func(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
 	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error)
 	sendReportFaults         func(ctx context.Context, sectorNums ...abi.SectorNumber) (cid.Cid, error)
-	sendSelfDeals            func(context.Context, ...storage.PieceInfo) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (exitCode uint8, err error)
 	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
-	waitForSelfDeals         func(context.Context, cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error)
+	waitMessage              func(ctx context.Context, msg cid.Cid) (storage.MsgWait, error)
 	walletHas                func(ctx context.Context, addr address.Address) (bool, error)
+	msgCidToReturn           map[cid.Cid]runtime.CBORMarshaler
 }
 
 func newFakeNode() *fakeNode {
+	m := make(map[cid.Cid]runtime.CBORMarshaler)
+
+	m[createCidForTesting(int(builtin.MethodsMarket.PublishStorageDeals))] = &market.PublishStorageDealsReturn{
+		IDs: []abi.DealID{42, 99},
+	}
+
 	return &fakeNode{
 		checkPieces: func(ctx context.Context, sectorNum abi.SectorNumber, pieces []storage.Piece) *storage.CheckPiecesError {
 			return nil
@@ -59,6 +71,9 @@ func newFakeNode() *fakeNode {
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
+		sendMessage: func(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (c cid.Cid, err error) {
+			return createCidForTesting(int(method)), nil
+		},
 		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
 			return createCidForTesting(42), nil
 		},
@@ -68,30 +83,37 @@ func newFakeNode() *fakeNode {
 		sendReportFaults: func(ctx context.Context, sectorNumbers ...abi.SectorNumber) (i cid.Cid, e error) {
 			return createCidForTesting(42), nil
 		},
-		sendSelfDeals: func(context.Context, ...storage.PieceInfo) (cid.Cid, error) {
-			panic("by default, no self deals will be made")
-		},
 		waitForProveCommitSector: func(context.Context, cid.Cid) (exitCode uint8, err error) {
 			return 0, nil
 		},
 		waitForReportFaults: func(i context.Context, i2 cid.Cid) (u uint8, e error) {
 			return 0, nil
 		},
-		waitForSelfDeals: func(context.Context, cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
-			panic("by default, no self deals will be made")
+		waitMessage: func(ctx context.Context, msg cid.Cid) (wait storage.MsgWait, err error) {
+			v, ok := m[msg]
+
+			if !ok {
+				panic(fmt.Sprintf("test setup is missing message cid: %s, map: %+v", msg, m))
+			}
+
+			buf := new(bytes.Buffer)
+			if err := v.MarshalCBOR(buf); err != nil {
+				panic(fmt.Sprintf("test failed to marshal CBOR bytes: %w", err))
+			}
+
+			return storage.MsgWait{
+				Receipt: storage.MessageReceipt{
+					ExitCode: 0,
+					Return:   buf.Bytes(),
+					GasUsed:  abi.NewTokenAmount(0),
+				},
+				Height: 0,
+			}, nil
 		},
 		walletHas: func(ctx context.Context, addr address.Address) (b bool, e error) {
 			return true, nil
 		},
 	}
-}
-
-func (f *fakeNode) SendSelfDeals(ctx context.Context, pieces ...storage.PieceInfo) (cid.Cid, error) {
-	return f.sendSelfDeals(ctx, pieces...)
-}
-
-func (f *fakeNode) WaitForSelfDeals(ctx context.Context, msg cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
-	return f.waitForSelfDeals(ctx, msg)
 }
 
 func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket storage.SealTicket, pieces ...storage.Piece) (cid.Cid, error) {
@@ -127,7 +149,7 @@ func (f *fakeNode) GetReplicaCommitmentByID(ctx context.Context, sectorNum abi.S
 }
 
 func (f *fakeNode) SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error) {
-	return createCidForTesting(99), nil
+	return f.sendMessage(from, to, method, value, params)
 }
 
 func (f *fakeNode) SendReportFaults(ctx context.Context, sectorNumbers ...abi.SectorNumber) (cid.Cid, error) {
@@ -138,25 +160,8 @@ func (f *fakeNode) WaitForReportFaults(ctx context.Context, msg cid.Cid) (uint8,
 	return f.waitForReportFaults(ctx, msg)
 }
 
-func (f *fakeNode) WaitMessage(context.Context, cid.Cid) (storage.MsgWait, error) {
-	out := market.PublishStorageDealsReturn{
-		IDs: []abi.DealID{1, 2},
-	}
-
-	buf := new(bytes.Buffer)
-
-	if err := out.MarshalCBOR(buf); err != nil {
-		return storage.MsgWait{}, err
-	}
-
-	return storage.MsgWait{
-		Receipt: storage.MessageReceipt{
-			ExitCode: 0,
-			Return:   buf.Bytes(),
-			GasUsed:  abi.TokenAmount{},
-		},
-		Height: 0,
-	}, nil
+func (f *fakeNode) WaitMessage(ctx context.Context, msg cid.Cid) (storage.MsgWait, error) {
+	return f.waitMessage(ctx, msg)
 }
 
 func (f *fakeNode) WalletHas(ctx context.Context, addr address.Address) (bool, error) {

@@ -4,17 +4,13 @@ import (
 	"bytes"
 	"testing"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
-	"github.com/stretchr/testify/require"
-
 	cborutil "github.com/filecoin-project/go-cbor-util"
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSectorInfoSelialization(t *testing.T) {
 	var commP [32]byte
-	pieceCid, err := commcid.CommitmentToCID(commP[:], commcid.FC_UNSEALED_V1)
-	require.NoError(t, err)
 
 	si := &SectorInfo{
 		State:     123,
@@ -23,7 +19,7 @@ func TestSectorInfoSelialization(t *testing.T) {
 		Pieces: []Piece{{
 			DealID:   1234,
 			Size:     5,
-			PieceCID: pieceCid,
+			PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
 		}},
 		CommD: []byte{32, 4},
 		CommR: nil,

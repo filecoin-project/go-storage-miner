@@ -1,12 +1,18 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/filecoin-project/specs-actors/actors/builtin/market"
+
+	"github.com/filecoin-project/specs-actors/actors/builtin"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
@@ -75,21 +81,47 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	require.NoError(t, err)
 
 	// we'll assert the contents of this slice at the end of the test
-	var selfDealPieceSizes []uint64
+	var selfDealPieceSizes []abi.UnpaddedPieceSize
 
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendSelfDeals = func(i context.Context, info ...storage.PieceInfo) (cid cid.Cid, e error) {
-			selfDealPieceSizes = append(selfDealPieceSizes, info[0].Size)
-			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size)
+		n.sendMessage = func(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (c cid.Cid, err error) {
+			switch method {
+			case builtin.MethodsMarket.PublishStorageDeals:
+				arg := new(market.PublishStorageDealsParams)
+				if err = arg.UnmarshalCBOR(bytes.NewReader(params)); err != nil {
+					panic(fmt.Sprintf("unmarshaling PublishStorageDealsParams failed: %w", err))
+				}
+
+				selfDealPieceSizes = append(selfDealPieceSizes, arg.Deals[0].Proposal.PieceSize.Unpadded())
+				selfDealPieceSizes = append(selfDealPieceSizes, arg.Deals[1].Proposal.PieceSize.Unpadded())
+			default:
+				panic(fmt.Sprintf("unhandled method call in test: %d", method))
+			}
 
 			return createCidForTesting(42), nil
 		}
 
-		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
-			return []abi.DealID{42, 43}, 0, nil
+		n.waitMessage = func(ctx context.Context, msg cid.Cid) (wait storage.MsgWait, err error) {
+			ret := &market.PublishStorageDealsReturn{
+				IDs: []abi.DealID{42, 99},
+			}
+
+			buf := new(bytes.Buffer)
+			if err := ret.MarshalCBOR(buf); err != nil {
+				panic(fmt.Sprintf("failed to marshal PublishStorageDealsReturn CBOR bytes: %w", err))
+			}
+
+			return storage.MsgWait{
+				Receipt: storage.MessageReceipt{
+					ExitCode: 0,
+					Return:   buf.Bytes(),
+					GasUsed:  abi.NewTokenAmount(0),
+				},
+				Height: 0,
+			}, nil
 		}
 
 		return n
@@ -129,8 +161,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	select {
 	case <-doneCh:
 		require.Equal(t, 2, len(selfDealPieceSizes), "expected two self-deals")
-		assert.Equal(t, uint64(254), selfDealPieceSizes[0])
-		assert.Equal(t, uint64(508), selfDealPieceSizes[1])
+		assert.Equal(t, int(abi.UnpaddedPieceSize(254)), int(selfDealPieceSizes[0]))
+		assert.Equal(t, int(abi.UnpaddedPieceSize(508)), int(selfDealPieceSizes[1]))
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timed out waiting for sequence to complete: %s", getSequenceStatusFunc())
 	}

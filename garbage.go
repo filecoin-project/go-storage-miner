@@ -51,18 +51,13 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 			return nil, handle("failed to generate pledge commitment: ", err)
 		}
 
-		pieceCid, err := commcid.CommitmentToCID(commP[:], commcid.FC_UNSEALED_V1)
-		if err != nil {
-			return nil, handle("could not create PieceCID from CommP: ", err)
-		}
-
 		sdp := market.ClientDealProposal{
 			Proposal: market.DealProposal{
 				Client:               m.worker,
 				ClientCollateral:     abi.NewTokenAmount(0),
 				EndEpoch:             abi.ChainEpoch(0),
-				PieceCID:             pieceCid,
-				PieceSize:            abi.PaddedPieceSize(size),
+				PieceCID:             commcid.PieceCommitmentV1ToCID(commP[:]),
+				PieceSize:            size.Padded(),
 				Provider:             m.maddr,
 				ProviderCollateral:   abi.NewTokenAmount(0),
 				StartEpoch:           abi.ChainEpoch(0),
@@ -111,17 +106,12 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 			return nil, xerrors.Errorf("add piece: %w", err)
 		}
 
-		pieceCid, err := commcid.CommitmentToCID(ppi.CommP[:], commcid.FC_UNSEALED_V1)
-		if err != nil {
-			return nil, handle("could not create PieceCID from CommP: ", err)
-		}
-
 		existingPieceSizes = append(existingPieceSizes, size)
 
 		out[i] = Piece{
 			DealID:   ret.IDs[i],
 			Size:     ppi.Size.Padded(),
-			PieceCID: pieceCid,
+			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
 		}
 	}
 
@@ -154,7 +144,7 @@ func (m *Sealing) PledgeSector() error {
 			return
 		}
 
-		if err := m.newSector(context.TODO(), abi.SectorNumber(num), pieces[0].DealID, ppi); err != nil {
+		if err := m.newSector(context.TODO(), num, pieces[0].DealID, ppi); err != nil {
 			log.Errorf("%+v", err)
 			return
 		}
