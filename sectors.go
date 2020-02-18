@@ -6,8 +6,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/filecoin-project/go-storage-miner/lib/padreader"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 
+	"github.com/filecoin-project/go-padreader"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	xerrors "golang.org/x/xerrors"
 )
@@ -254,7 +255,7 @@ func (m *Miner) AllocateSectorID() (sectorID uint64, err error) {
 func (m *Miner) SealPiece(ctx context.Context, size uint64, r io.Reader, sectorID uint64, dealID uint64) error {
 	log.Infof("Seal piece for deal %d", dealID)
 
-	if padreader.PaddedSize(size) != size {
+	if padreader.PaddedSize(size) != abi.UnpaddedPieceSize(size) {
 		return xerrors.Errorf("cannot seal unpadded piece")
 	}
 
