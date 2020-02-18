@@ -9,13 +9,13 @@ import (
 )
 
 type Interface interface {
-	// SendMessage creates and sends a blockchain message with the provided
-	// arguments and returns its identity.
-	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
+	// SendSelfDeals publishes storage deals using the provided inputs and
+	// returns the identity of the corresponding PublishStorageDeals message.
+	SendSelfDeals(context.Context, ...abi.PieceInfo) (cid.Cid, error)
 
-	// WaitMessage blocks until a message with provided CID is mined into a
-	// block.
-	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
+	// WaitForSelfDeals blocks until the PublishStorageDeals message is mined
+	// into a block and then returns the referenced deal IDs.
+	WaitForSelfDeals(context.Context, cid.Cid) ([]abi.DealID, uint8, error)
 
 	// GetMinerWorkerAddressFromChainHead produces the worker address associated
 	// with the provider miner address at the current head.

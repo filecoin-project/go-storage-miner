@@ -1,58 +1,16 @@
 package sealing
 
 import (
-	"bytes"
-	"context"
 	"io"
 	"math/bits"
 	"math/rand"
 	"sync"
 
-	"github.com/filecoin-project/go-storage-miner/apis/node"
-
-	"github.com/filecoin-project/go-address"
-	runtime2 "github.com/filecoin-project/specs-actors/actors/runtime"
-	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
-
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/hashicorp/go-multierror"
+	"golang.org/x/xerrors"
 )
-
-type sender interface {
-	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
-}
-
-type waiter interface {
-	WaitMessage(context.Context, cid.Cid) (node.MsgWait, error)
-}
-
-func send(api sender, from, to address.Address, method abi.MethodNum, value abi.TokenAmount, input runtime2.CBORMarshaler) (cid.Cid, error) {
-	argBuf := new(bytes.Buffer)
-	if err := input.MarshalCBOR(argBuf); err != nil {
-		return cid.Undef, handle("marshaling to CBOR bytes failed: ", err)
-	}
-
-	return api.SendMessage(from, to, method, value, argBuf.Bytes())
-}
-
-func wait(ctx context.Context, api waiter, msg cid.Cid, output runtime2.CBORUnmarshaler) (uint8, error) {
-	wmsg, err := api.WaitMessage(ctx, msg)
-	if err != nil {
-		return 0, handle("waiting for message failed: ", err)
-	}
-
-	if wmsg.Receipt.ExitCode != 0 {
-		return wmsg.Receipt.ExitCode, nil
-	}
-
-	if err = output.UnmarshalCBOR(bytes.NewReader(wmsg.Receipt.Return)); err != nil {
-		return wmsg.Receipt.ExitCode, handle("unmarshaling CBOR bytes failed: ", err)
-	}
-
-	return wmsg.Receipt.ExitCode, nil
-}
 
 func handle(format string, x ...interface{}) error {
 	err := xerrors.Errorf(format, x)
