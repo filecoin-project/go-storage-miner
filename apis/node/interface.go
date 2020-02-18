@@ -9,13 +9,13 @@ import (
 )
 
 type Interface interface {
-	// SendMessage creates and sends a blockchain message with the provided
-	// arguments and returns its identity.
-	SendMessage(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (cid.Cid, error)
+	// SendSelfDeals publishes storage deals using the provided inputs and
+	// returns the identity of the corresponding PublishStorageDeals message.
+	SendSelfDeals(context.Context, ...abi.PieceInfo) (cid.Cid, error)
 
-	// WaitMessage blocks until a message with provided CID is mined into a
-	// block.
-	WaitMessage(context.Context, cid.Cid) (MsgWait, error)
+	// WaitForSelfDeals blocks until the PublishStorageDeals message is mined
+	// into a block and then returns the referenced deal IDs.
+	WaitForSelfDeals(context.Context, cid.Cid) ([]abi.DealID, uint8, error)
 
 	// GetMinerWorkerAddressFromChainHead produces the worker address associated
 	// with the provider miner address at the current head.
@@ -51,7 +51,7 @@ type Interface interface {
 
 	// GetSealSeed requests that a seal seed be provided through the return channel the given block interval after the preCommitMsg arrives on chain.
 	// It expects to be notified through the invalidated channel if a re-org sets the chain back to before the height at the interval.
-	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (<-chan SealSeed, <-chan SeedInvalidated, <-chan FinalityReached, <-chan *GetSealSeedError)
+	GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (<-chan SealSeed, <-chan SeedInvalidated, <-chan FinalityReached, <-chan GetSealSeedError)
 
 	// CheckPieces ensures that the provides pieces' metadata exist in
 	// not yet-expired on-chain storage deals.

@@ -1,29 +1,22 @@
 package test
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-storage-miner"
-
-	"github.com/filecoin-project/go-storage-miner/apis/node"
-
-	"github.com/filecoin-project/go-storage-miner/sealing"
-
-	"github.com/filecoin-project/specs-actors/actors/builtin/market"
-
-	"github.com/filecoin-project/specs-actors/actors/builtin"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+
+	"github.com/filecoin-project/go-storage-miner"
+	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-storage-miner/sealing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,41 +77,15 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendMessage = func(from, to address.Address, method abi.MethodNum, value abi.TokenAmount, params []byte) (c cid.Cid, err error) {
-			switch method {
-			case builtin.MethodsMarket.PublishStorageDeals:
-				arg := new(market.PublishStorageDealsParams)
-				if err = arg.UnmarshalCBOR(bytes.NewReader(params)); err != nil {
-					panic(fmt.Sprintf("unmarshaling PublishStorageDealsParams failed: %s", err))
-				}
-
-				selfDealPieceSizes = append(selfDealPieceSizes, arg.Deals[0].Proposal.PieceSize.Unpadded())
-				selfDealPieceSizes = append(selfDealPieceSizes, arg.Deals[1].Proposal.PieceSize.Unpadded())
-			default:
-				panic(fmt.Sprintf("unhandled method call in test: %d", method))
-			}
+		n.sendSelfDeals = func(i context.Context, info ...abi.PieceInfo) (cid cid.Cid, e error) {
+			selfDealPieceSizes = append(selfDealPieceSizes, info[0].Size.Unpadded())
+			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size.Unpadded())
 
 			return createCidForTesting(42), nil
 		}
 
-		n.waitMessage = func(ctx context.Context, msg cid.Cid) (wait node.MsgWait, err error) {
-			ret := &market.PublishStorageDealsReturn{
-				IDs: []abi.DealID{42, 99},
-			}
-
-			buf := new(bytes.Buffer)
-			if err := ret.MarshalCBOR(buf); err != nil {
-				panic(fmt.Sprintf("failed to marshal PublishStorageDealsReturn CBOR bytes: %s", err))
-			}
-
-			return node.MsgWait{
-				Receipt: node.MessageReceipt{
-					ExitCode: 0,
-					Return:   buf.Bytes(),
-					GasUsed:  abi.NewTokenAmount(0),
-				},
-				Height: 0,
-			}, nil
+		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
+			return []abi.DealID{abi.DealID(42), abi.DealID(43)}, 0, nil
 		}
 
 		return n
@@ -297,26 +264,4 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timed out waiting for sequence to complete: %s", getSequenceStatusFunc())
 	}
-}
-
-func TestHandlesSectorBuilderPreCommitError(t *testing.T) {
-	// SectorBuilderAPI#SealPreCommit produced an error
-	t.Skip("the sector should end up in a SealFailed state")
-}
-
-func TestHandlesSectorBuilderCommitError(t *testing.T) {
-	// SectorBuilderAPI#SealCommit produced an error
-	t.Skip("the sector should end up in a SealCommitFailed state")
-}
-
-func TestHandlesCommitSectorMessageNeverIncludedInBlock(t *testing.T) {
-	// what happens if the CommitSector message, which we're waiting on, doesn't
-	// show up in the chain in a timely manner?
-	t.Skip("the sector should end up in a CommitFailed state (or perhaps Committing if error was transient)")
-}
-
-func TestSealSeedInvalidated(t *testing.T) {
-	// GetSealSeed called our "seed available" handler, and then some
-	// time later called our "seed invalidated" handler
-	t.Skip("the sector should go back to a PreCommitted state")
 }
