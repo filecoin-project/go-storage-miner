@@ -36,8 +36,8 @@ type CheckSealingError struct {
 	EType CheckSealingErrorType
 }
 
-func NewCheckSealingError(inner error, etype CheckSealingErrorType) *CheckSealingError {
-	return &CheckSealingError{inner: inner, EType: etype}
+func NewCheckSealingError(inner error, etype CheckSealingErrorType) CheckSealingError {
+	return CheckSealingError{inner: inner, EType: etype}
 }
 
 func (c CheckSealingError) Inner() error {
@@ -57,8 +57,8 @@ type GetSealSeedError struct {
 	EType GetSealSeedErrorType
 }
 
-func NewGetSealSeedError(inner error, etype GetSealSeedErrorType) *GetSealSeedError {
-	return &GetSealSeedError{inner: inner, EType: etype}
+func NewGetSealSeedError(inner error, etype GetSealSeedErrorType) GetSealSeedError {
+	return GetSealSeedError{inner: inner, EType: etype}
 }
 
 func (c GetSealSeedError) Unwrap() error {

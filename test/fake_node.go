@@ -17,7 +17,7 @@ type fakeNode struct {
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError
 	getMinerWorkerAddress    func(ctx context.Context, maddr address.Address) (address.Address, error)
 	getReplicaCommitmentByID func(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
-	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan *node.GetSealSeedError)
+	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError)
 	getSealTicket            func(context.Context) (node.SealTicket, error)
 	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error)
@@ -43,7 +43,7 @@ func newFakeNode() *fakeNode {
 		getReplicaCommitmentByID: func(ctx context.Context, sectorNum abi.SectorNumber) ([]byte, bool, error) {
 			return nil, false, nil
 		},
-		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan *node.GetSealSeedError) {
+		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
 			seedChan := make(chan node.SealSeed)
 			go func() {
 				seedChan <- node.SealSeed{
@@ -52,7 +52,7 @@ func newFakeNode() *fakeNode {
 				}
 			}()
 
-			return seedChan, make(chan node.SeedInvalidated), make(chan node.FinalityReached), make(chan *node.GetSealSeedError)
+			return seedChan, make(chan node.SeedInvalidated), make(chan node.FinalityReached), make(chan node.GetSealSeedError)
 		},
 		getSealTicket: func(context.Context) (node.SealTicket, error) {
 			return node.SealTicket{
@@ -107,7 +107,7 @@ func (f *fakeNode) GetSealTicket(ctx context.Context) (node.SealTicket, error) {
 	return f.getSealTicket(ctx)
 }
 
-func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsgCid cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan *node.GetSealSeedError) {
+func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsgCid cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
 	return f.getSealSeed(ctx, preCommitMsgCid, interval)
 }
 
