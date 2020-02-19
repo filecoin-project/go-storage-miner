@@ -15,16 +15,18 @@ type Chain interface {
 type FixedDurationPolicy struct {
 	api Chain
 
-	// self deal start epoch equals chain head epoch plus delay
-	delay abi.ChainEpoch
+	// An estimate for the number of blocks between the current chain head and
+	// when a sector should have been proven. Used to compute the self-deal
+	// StartEpoch.
+	provingDelay abi.ChainEpoch
 
-	// self deal expiry epoch equals chain head plus delay plus duration
+	// The number of epochs for which the self-dealing miner will receive power.
 	duration abi.ChainEpoch
 }
 
 // NewFixedDurationPolicy produces a new fixed duration self-deal policy.
 func NewFixedDurationPolicy(api Chain, delay abi.ChainEpoch, duration abi.ChainEpoch) FixedDurationPolicy {
-	return FixedDurationPolicy{api: api, delay: delay, duration: duration}
+	return FixedDurationPolicy{api: api, provingDelay: delay, duration: duration}
 }
 
 // Schedule produces the deal terms for this fixed duration self-deal policy.
@@ -35,7 +37,7 @@ func (p *FixedDurationPolicy) Schedule(ctx context.Context, pieces ...abi.PieceI
 	}
 
 	return Schedule{
-		StartEpoch:  epoch + p.delay,
-		ExpiryEpoch: epoch + p.delay + p.duration,
+		StartEpoch: epoch + p.provingDelay,
+		EndEpoch:   epoch + p.provingDelay + p.duration,
 	}, nil
 }

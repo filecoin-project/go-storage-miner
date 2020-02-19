@@ -42,7 +42,7 @@ func TestFixedDurationScheduleIgnoresSelfDealPieces(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, int(s1.StartEpoch), int(s2.StartEpoch))
-	assert.Equal(t, int(s1.ExpiryEpoch), int(s2.ExpiryEpoch))
+	assert.Equal(t, int(s1.EndEpoch), int(s2.EndEpoch))
 }
 
 func TestFixedDurationScheduleBounds(t *testing.T) {
@@ -58,5 +58,5 @@ func TestFixedDurationScheduleBounds(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, int(s.StartEpoch), int(headEpoch+delay))
-	assert.Equal(t, int(duration), int(s.ExpiryEpoch)-int(s.StartEpoch))
+	assert.Equal(t, int(duration), int(s.EndEpoch)-int(s.StartEpoch))
 }

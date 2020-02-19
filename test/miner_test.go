@@ -91,8 +91,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size.Unpadded())
 
 			selfDealSchedule = selfdeal.Schedule{
-				StartEpoch:  start,
-				ExpiryEpoch: end,
+				StartEpoch: start,
+				EndEpoch:   end,
 			}
 
 			return createCidForTesting(42), nil
@@ -144,7 +144,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		assert.Equal(t, int(abi.UnpaddedPieceSize(254)), int(selfDealPieceSizes[0]))
 		assert.Equal(t, int(abi.UnpaddedPieceSize(508)), int(selfDealPieceSizes[1]))
 		assert.Greater(t, int(selfDealSchedule.StartEpoch), 0)
-		assert.Greater(t, int(selfDealSchedule.ExpiryEpoch), 0)
+		assert.Greater(t, int(selfDealSchedule.EndEpoch), 0)
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timed out waiting for sequence to complete: %s", getSequenceStatusFunc())
 	}

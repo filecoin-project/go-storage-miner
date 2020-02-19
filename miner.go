@@ -26,7 +26,7 @@ type Miner struct {
 	ds      datastore.Batching
 	sealing *sealing.Sealing
 
-	// used to compute self-deal schedule (e.g. start and expiry epochs)
+	// used to compute self-deal schedule (e.g. start and end epochs)
 	selfDealPolicy selfdeal.Policy
 
 	// onSectorUpdated is called each time a sector transitions from one state

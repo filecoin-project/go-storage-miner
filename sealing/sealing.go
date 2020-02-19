@@ -34,7 +34,7 @@ type Sealing struct {
 	sb      sectorbuilder.Interface
 	sectors *statemachine.StateGroup
 
-	// used to compute self-deal schedule (e.g. start and expiry epochs), this
+	// used to compute self-deal schedule (e.g. start and end epochs), this
 	// value is inherited from the Miner which creates this Sealing struct
 	selfDealPolicy selfdeal.Policy
 

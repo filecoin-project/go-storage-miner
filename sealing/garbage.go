@@ -57,7 +57,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		return nil, handle("failed to create self-deal schedule", err)
 	}
 
-	mcid, err := m.api.SendSelfDeals(ctx, schedule.StartEpoch, schedule.ExpiryEpoch, pieces...)
+	mcid, err := m.api.SendSelfDeals(ctx, schedule.StartEpoch, schedule.EndEpoch, pieces...)
 	if err != nil {
 		return nil, handle("failed to send self-deals to node", err)
 	}
