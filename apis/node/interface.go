@@ -19,7 +19,7 @@ type Interface interface {
 
 	// GetMinerWorkerAddress produces the worker address associated with the
 	// miner.
-	GetMinerWorkerAddress(context.Context) (address.Address, error)
+	GetMinerWorkerAddress(context.Context, TipSetToken) (address.Address, error)
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
@@ -42,7 +42,7 @@ type Interface interface {
 
 	// GetSealTicket produces a ticket from the chain to which the miner commits
 	// when they start encoding a sector.
-	GetSealTicket(context.Context) (SealTicket, error)
+	GetSealTicket(context.Context, TipSetToken) (SealTicket, error)
 
 	// GetReplicaCommitmentByID produces the CommR associated with the given
 	// sector as it appears in a pre-commit message. If the sector has not been
@@ -66,4 +66,7 @@ type Interface interface {
 	// WalletHas checks the wallet for the key associated with the provided
 	// address.
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
+
+	// GetChainHead produces the tipset identifier for the chain's head.
+	GetChainHead(ctx context.Context) (TipSetToken, error)
 }

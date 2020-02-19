@@ -8,6 +8,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// TipSetToken is the implementation-nonspecific identity for a tipset.
+type TipSetToken []byte
+
 type FinalityReached struct{}
 type SeedInvalidated struct{}
 
