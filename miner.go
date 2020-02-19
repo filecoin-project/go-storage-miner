@@ -81,7 +81,7 @@ func (m *Miner) Stop(ctx context.Context) error {
 }
 
 func (m *Miner) runPreflightChecks(ctx context.Context) error {
-	tok, err := m.api.GetChainHead(ctx)
+	tok, _, err := m.api.GetChainHead(ctx)
 	if err != nil {
 		return xerrors.Errorf("failed to get chain head: %w", err)
 	}

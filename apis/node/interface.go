@@ -11,7 +11,7 @@ import (
 type Interface interface {
 	// SendSelfDeals publishes storage deals using the provided inputs and
 	// returns the identity of the corresponding PublishStorageDeals message.
-	SendSelfDeals(context.Context, ...abi.PieceInfo) (cid.Cid, error)
+	SendSelfDeals(ctx context.Context, startEpoch, endEpoch abi.ChainEpoch, pieces ...abi.PieceInfo) (cid.Cid, error)
 
 	// WaitForSelfDeals blocks until the PublishStorageDeals message is mined
 	// into a block and then returns the referenced deal IDs.
@@ -67,6 +67,7 @@ type Interface interface {
 	// address.
 	WalletHas(ctx context.Context, addr address.Address) (bool, error)
 
-	// GetChainHead produces the tipset identifier for the chain's head.
-	GetChainHead(ctx context.Context) (TipSetToken, error)
+	// GetChainHead produces the tipset identifier and height of the chain's
+	// head.
+	GetChainHead(ctx context.Context) (TipSetToken, abi.ChainEpoch, error)
 }

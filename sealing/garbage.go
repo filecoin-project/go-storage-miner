@@ -53,7 +53,14 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		}
 	}
 
-	mcid, err := m.api.SendSelfDeals(ctx, pieces...)
+	_, epoch, err := m.api.GetChainHead(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	panic("TODO: implement a real policy")
+
+	mcid, err := m.api.SendSelfDeals(ctx, epoch+100, epoch+1000, pieces...)
 	if err != nil {
 		return nil, err
 	}

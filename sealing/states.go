@@ -1,7 +1,7 @@
 package sealing
 
 import (
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
+	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
@@ -68,7 +68,7 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 		}
 	}
 
-	tok, err := m.api.GetChainHead(ctx.Context())
+	tok, _, err := m.api.GetChainHead(ctx.Context())
 	if err != nil {
 		return xerrors.Errorf("failed to get chain head: %w", err)
 	}

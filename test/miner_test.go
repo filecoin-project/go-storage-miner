@@ -77,7 +77,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendSelfDeals = func(i context.Context, info ...abi.PieceInfo) (cid cid.Cid, e error) {
+		n.sendSelfDeals = func(i context.Context, start, end abi.ChainEpoch, info ...abi.PieceInfo) (cid cid.Cid, e error) {
 			selfDealPieceSizes = append(selfDealPieceSizes, info[0].Size.Unpadded())
 			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size.Unpadded())
 
