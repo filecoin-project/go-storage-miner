@@ -10,7 +10,6 @@ import (
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
-	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 )
@@ -53,40 +52,34 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		}
 	}
 
-	_, epoch, err := m.api.GetChainHead(ctx)
+	schedule, err := m.selfDealPolicy.Schedule(ctx, pieces...)
 	if err != nil {
-		return nil, err
+		return nil, handle("failed to create self-deal schedule", err)
 	}
 
-	panic("TODO: implement a real policy")
-
-	mcid, err := m.api.SendSelfDeals(ctx, epoch+100, epoch+1000, pieces...)
+	mcid, err := m.api.SendSelfDeals(ctx, schedule.StartEpoch, schedule.ExpiryEpoch, pieces...)
 	if err != nil {
-		return nil, err
+		return nil, handle("failed to send self-deals to node", err)
 	}
 
 	dealIDs, exitCode, err := m.api.WaitForSelfDeals(ctx, mcid)
 	if err != nil {
-		return nil, err
+		return nil, handle("node produced an error waiting for self deals", err)
 	}
 
 	if exitCode != 0 {
-		err := xerrors.Errorf("publishing deal failed: exit %d", exitCode)
-		log.Error(err)
-		return nil, err
+		return nil, handle("publishing deal failed: exit %d", exitCode)
 	}
 
 	if len(dealIDs) != len(sizes) {
-		err := xerrors.New("got unexpected number of DealIDs from PublishStorageDeals")
-		log.Error(err)
-		return nil, err
+		return nil, handle("got unexpected number of deal IDs from PublishStorageDeals (len(dealIDs)=%d != len(sizes)=%d)", len(dealIDs), len(sizes))
 	}
 
 	out := make([]node.Piece, len(sizes))
 	for i, size := range sizes {
 		ppi, err := m.sb.AddPiece(ctx, size, sectorNum, m.pledgeReader(size, uint64(runtime.NumCPU())), existingPieceSizes)
 		if err != nil {
-			return nil, xerrors.Errorf("add piece: %w", err)
+			return nil, handle("add piece: %w", err)
 		}
 
 		existingPieceSizes = append(existingPieceSizes, size)

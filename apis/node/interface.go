@@ -11,7 +11,7 @@ import (
 type Interface interface {
 	// SendSelfDeals publishes storage deals using the provided inputs and
 	// returns the identity of the corresponding PublishStorageDeals message.
-	SendSelfDeals(ctx context.Context, startEpoch, endEpoch abi.ChainEpoch, pieces ...abi.PieceInfo) (cid.Cid, error)
+	SendSelfDeals(ctx context.Context, startEpoch, expiryEpoch abi.ChainEpoch, pieces ...abi.PieceInfo) (cid.Cid, error)
 
 	// WaitForSelfDeals blocks until the PublishStorageDeals message is mined
 	// into a block and then returns the referenced deal IDs.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 	"github.com/filecoin-project/go-storage-miner/sealing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,6 +32,9 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
+	api := newFakeNode()
+	sdp := selfdeal.NewFixedDurationPolicy(api, 10, 100)
+
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -42,7 +46,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(sealing.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(api, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -70,16 +74,26 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
-	// we'll assert the contents of this slice at the end of the test
+	// we'll assert the contents of these slices at the end of the test
 	var selfDealPieceSizes []abi.UnpaddedPieceSize
+	var selfDealSchedule selfdeal.Schedule
 
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
+		n.getChainHead = func(ctx context.Context) (token node.TipSetToken, epoch abi.ChainEpoch, err error) {
+			return []byte{1, 2, 3}, abi.ChainEpoch(66), nil
+		}
+
 		n.sendSelfDeals = func(i context.Context, start, end abi.ChainEpoch, info ...abi.PieceInfo) (cid cid.Cid, e error) {
 			selfDealPieceSizes = append(selfDealPieceSizes, info[0].Size.Unpadded())
 			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size.Unpadded())
+
+			selfDealSchedule = selfdeal.Schedule{
+				StartEpoch:  start,
+				ExpiryEpoch: end,
+			}
 
 			return createCidForTesting(42), nil
 		}
@@ -90,6 +104,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 		return n
 	}()
+
+	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
 
 	sb := &fakeSectorBuilder{}
 
@@ -107,7 +123,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(sealing.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, &sdp, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -127,6 +143,8 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		require.Equal(t, 2, len(selfDealPieceSizes), "expected two self-deals")
 		assert.Equal(t, int(abi.UnpaddedPieceSize(254)), int(selfDealPieceSizes[0]))
 		assert.Equal(t, int(abi.UnpaddedPieceSize(508)), int(selfDealPieceSizes[1]))
+		assert.Greater(t, int(selfDealSchedule.StartEpoch), 0)
+		assert.Greater(t, int(selfDealSchedule.ExpiryEpoch), 0)
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timed out waiting for sequence to complete: %s", getSequenceStatusFunc())
 	}
@@ -149,6 +167,8 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		return n
 	}()
 
+	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
+
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -156,7 +176,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(sealing.PreCommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -192,6 +212,8 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		return n
 	}()
 
+	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
+
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -201,7 +223,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		then(sealing.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -237,6 +259,8 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		return n
 	}()
 
+	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
+
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -247,7 +271,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		then(sealing.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
