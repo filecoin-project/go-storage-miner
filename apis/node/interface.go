@@ -17,9 +17,9 @@ type Interface interface {
 	// into a block and then returns the referenced deal IDs.
 	WaitForSelfDeals(context.Context, cid.Cid) ([]abi.DealID, uint8, error)
 
-	// GetMinerWorkerAddressFromChainHead produces the worker address associated
-	// with the provider miner address at the current head.
-	GetMinerWorkerAddressFromChainHead(context.Context, address.Address) (address.Address, error)
+	// GetMinerWorkerAddress produces the worker address associated with the
+	// miner.
+	GetMinerWorkerAddress(context.Context) (address.Address, error)
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.

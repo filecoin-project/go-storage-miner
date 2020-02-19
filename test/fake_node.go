@@ -99,7 +99,7 @@ func (f *fakeNode) WaitForProveCommitSector(ctx context.Context, msg cid.Cid) (e
 	return f.waitForProveCommitSector(ctx, msg)
 }
 
-func (f *fakeNode) GetMinerWorkerAddressFromChainHead(ctx context.Context, maddr address.Address) (address.Address, error) {
+func (f *fakeNode) GetMinerWorkerAddress(ctx context.Context) (address.Address, error) {
 	return f.getMinerWorkerAddress(ctx, maddr)
 }
 

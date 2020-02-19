@@ -81,7 +81,7 @@ func (m *Miner) Stop(ctx context.Context) error {
 }
 
 func (m *Miner) runPreflightChecks(ctx context.Context) error {
-	waddr, err := m.api.GetMinerWorkerAddressFromChainHead(ctx, m.maddr)
+	waddr, err := m.api.GetMinerWorkerAddress(ctx)
 	if err != nil {
 		return xerrors.Errorf("error acquiring worker address: %w", err)
 	}
