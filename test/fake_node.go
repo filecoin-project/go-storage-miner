@@ -3,6 +3,8 @@ package test
 import (
 	"context"
 
+	commcid "github.com/filecoin-project/go-fil-commcid"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
@@ -17,7 +19,7 @@ type fakeNode struct {
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError
 	getChainHead             func(ctx context.Context) (node.TipSetToken, error)
 	getMinerWorkerAddress    func(context.Context, node.TipSetToken) (address.Address, error)
-	getReplicaCommitmentByID func(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
+	getSealedCID             func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError)
 	getSealTicket            func(context.Context, node.TipSetToken) (node.SealTicket, error)
 	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error)
@@ -44,8 +46,9 @@ func newFakeNode() *fakeNode {
 		getMinerWorkerAddress: func(ctx context.Context, tok node.TipSetToken) (a address.Address, err error) {
 			return address.NewIDAddress(42)
 		},
-		getReplicaCommitmentByID: func(ctx context.Context, sectorNum abi.SectorNumber) ([]byte, bool, error) {
-			return nil, false, nil
+		getSealedCID: func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error) {
+			commR := [32]byte{1, 2, 3}
+			return commcid.ReplicaCommitmentV1ToCID(commR[:]), false, nil
 		},
 		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
 			seedChan := make(chan node.SealSeed)
@@ -107,8 +110,8 @@ func (f *fakeNode) GetMinerWorkerAddress(ctx context.Context, tok node.TipSetTok
 	return f.getMinerWorkerAddress(ctx, tok)
 }
 
-func (f *fakeNode) GetReplicaCommitmentByID(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error) {
-	return f.getReplicaCommitmentByID(ctx, sectorNum)
+func (f *fakeNode) GetSealedCID(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error) {
+	return f.getSealedCID(ctx, tok, sectorNum)
 }
 
 func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {

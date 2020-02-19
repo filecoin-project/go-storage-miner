@@ -44,10 +44,10 @@ type Interface interface {
 	// when they start encoding a sector.
 	GetSealTicket(context.Context, TipSetToken) (SealTicket, error)
 
-	// GetReplicaCommitmentByID produces the CommR associated with the given
-	// sector as it appears in a pre-commit message. If the sector has not been
-	// pre-committed, wasFound will be false.
-	GetReplicaCommitmentByID(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
+	// GetSealedCID produces the sealed sector's CID associated with the given
+	// sector number as it appears in a pre-commit message. If the sector has
+	// not been  pre-committed, wasFound will be false.
+	GetSealedCID(context.Context, TipSetToken, abi.SectorNumber) (sealedCID cid.Cid, wasFound bool, err error)
 
 	// GetSealSeed requests that a seal seed be provided through the return channel the given block interval after the preCommitMsg arrives on chain.
 	// It expects to be notified through the invalidated channel if a re-org sets the chain back to before the height at the interval.
