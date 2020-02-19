@@ -68,8 +68,13 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 		}
 	}
 
+	tok, err := m.api.GetChainHead(ctx.Context())
+	if err != nil {
+		return xerrors.Errorf("failed to get chain head: %w", err)
+	}
+
 	log.Infow("performing sector replication...", "sector", sector.SectorNum)
-	ticket, err := m.api.GetSealTicket(ctx.Context())
+	ticket, err := m.api.GetSealTicket(ctx.Context(), tok)
 	if err != nil {
 		return ctx.Send(SectorSealFailed{xerrors.Errorf("getting ticket failed: %w", err)})
 	}
