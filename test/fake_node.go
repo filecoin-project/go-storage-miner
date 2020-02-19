@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/filecoin-project/go-address"
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
@@ -15,10 +16,11 @@ import (
 type fakeNode struct {
 	checkPieces              func(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.Piece) *node.CheckPiecesError
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError
-	getMinerWorkerAddress    func(ctx context.Context, maddr address.Address) (address.Address, error)
-	getReplicaCommitmentByID func(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error)
+	getChainHead             func(ctx context.Context) (node.TipSetToken, error)
+	getMinerWorkerAddress    func(context.Context, node.TipSetToken) (address.Address, error)
+	getSealedCID             func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError)
-	getSealTicket            func(context.Context) (node.SealTicket, error)
+	getSealTicket            func(context.Context, node.TipSetToken) (node.SealTicket, error)
 	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error)
 	sendReportFaults         func(ctx context.Context, sectorNums ...abi.SectorNumber) (cid.Cid, error)
@@ -37,11 +39,15 @@ func newFakeNode() *fakeNode {
 		checkSealing: func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError {
 			return nil
 		},
-		getMinerWorkerAddress: func(ctx context.Context, maddr address.Address) (a address.Address, err error) {
+		getChainHead: func(ctx context.Context) (token node.TipSetToken, err error) {
+			return node.TipSetToken{1, 2, 3}, nil
+		},
+		getMinerWorkerAddress: func(ctx context.Context, tok node.TipSetToken) (a address.Address, err error) {
 			return address.NewIDAddress(42)
 		},
-		getReplicaCommitmentByID: func(ctx context.Context, sectorNum abi.SectorNumber) ([]byte, bool, error) {
-			return nil, false, nil
+		getSealedCID: func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error) {
+			commR := [32]byte{1, 2, 3}
+			return commcid.ReplicaCommitmentV1ToCID(commR[:]), false, nil
 		},
 		getSealSeed: func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
 			seedChan := make(chan node.SealSeed)
@@ -54,16 +60,13 @@ func newFakeNode() *fakeNode {
 
 			return seedChan, make(chan node.SeedInvalidated), make(chan node.FinalityReached), make(chan node.GetSealSeedError)
 		},
-		getSealTicket: func(context.Context) (node.SealTicket, error) {
+		getSealTicket: func(context.Context, node.TipSetToken) (node.SealTicket, error) {
 			return node.SealTicket{
 				BlockHeight: 42,
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
 		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error) {
-			return createCidForTesting(42), nil
-		},
-		sendProveCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error) {
 			return createCidForTesting(42), nil
 		},
 		sendReportFaults: func(ctx context.Context, sectorNumbers ...abi.SectorNumber) (i cid.Cid, e error) {
@@ -84,31 +87,10 @@ func newFakeNode() *fakeNode {
 		walletHas: func(ctx context.Context, addr address.Address) (b bool, e error) {
 			return true, nil
 		},
+		sendProveCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error) {
+			return createCidForTesting(42), nil
+		},
 	}
-}
-
-func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error) {
-	return f.sendPreCommitSector(ctx, sectorNum, commR, ticket, pieces...)
-}
-
-func (f *fakeNode) SendProveCommitSector(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error) {
-	return f.sendProveCommitSector(ctx, sectorNum, proof, dealIds...)
-}
-
-func (f *fakeNode) WaitForProveCommitSector(ctx context.Context, msg cid.Cid) (exitCode uint8, err error) {
-	return f.waitForProveCommitSector(ctx, msg)
-}
-
-func (f *fakeNode) GetMinerWorkerAddressFromChainHead(ctx context.Context, maddr address.Address) (address.Address, error) {
-	return f.getMinerWorkerAddress(ctx, maddr)
-}
-
-func (f *fakeNode) GetSealTicket(ctx context.Context) (node.SealTicket, error) {
-	return f.getSealTicket(ctx)
-}
-
-func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsgCid cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
-	return f.getSealSeed(ctx, preCommitMsgCid, interval)
 }
 
 func (f *fakeNode) CheckPieces(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.Piece) *node.CheckPiecesError {
@@ -119,8 +101,32 @@ func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []abi
 	return f.checkSealing(ctx, commD, dealIDs, ticket)
 }
 
-func (f *fakeNode) GetReplicaCommitmentByID(ctx context.Context, sectorNum abi.SectorNumber) (commR []byte, wasFound bool, err error) {
-	return f.getReplicaCommitmentByID(ctx, sectorNum)
+func (f *fakeNode) GetChainHead(ctx context.Context) (node.TipSetToken, error) {
+	return f.getChainHead(ctx)
+}
+
+func (f *fakeNode) GetMinerWorkerAddress(ctx context.Context, tok node.TipSetToken) (address.Address, error) {
+	return f.getMinerWorkerAddress(ctx, tok)
+}
+
+func (f *fakeNode) GetSealedCID(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error) {
+	return f.getSealedCID(ctx, tok, sectorNum)
+}
+
+func (f *fakeNode) GetSealSeed(ctx context.Context, preCommitMsg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError) {
+	return f.getSealSeed(ctx, preCommitMsg, interval)
+}
+
+func (f *fakeNode) GetSealTicket(ctx context.Context, tok node.TipSetToken) (node.SealTicket, error) {
+	return f.getSealTicket(ctx, tok)
+}
+
+func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error) {
+	return f.sendPreCommitSector(ctx, sectorNum, commR, ticket, pieces...)
+}
+
+func (f *fakeNode) SendProveCommitSector(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error) {
+	return f.sendProveCommitSector(ctx, sectorNum, proof, dealIds...)
 }
 
 func (f *fakeNode) SendReportFaults(ctx context.Context, sectorNumbers ...abi.SectorNumber) (cid.Cid, error) {
@@ -129,6 +135,10 @@ func (f *fakeNode) SendReportFaults(ctx context.Context, sectorNumbers ...abi.Se
 
 func (f *fakeNode) SendSelfDeals(ctx context.Context, pieces ...abi.PieceInfo) (cid.Cid, error) {
 	return f.sendSelfDeals(ctx, pieces...)
+}
+
+func (f *fakeNode) WaitForProveCommitSector(ctx context.Context, msg cid.Cid) (exitCode uint8, err error) {
+	return f.waitForProveCommitSector(ctx, msg)
 }
 
 func (f *fakeNode) WaitForReportFaults(ctx context.Context, msg cid.Cid) (uint8, error) {

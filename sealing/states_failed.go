@@ -6,6 +6,7 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-statemachine"
 	"golang.org/x/xerrors"
 )
@@ -26,10 +27,21 @@ func failedCooldown(ctx statemachine.Context, sector SectorInfo) error {
 	return nil
 }
 
-func (m *Sealing) checkPreCommitted(ctx statemachine.Context, sector SectorInfo) (commR []byte, wasFound bool, err error) {
-	commR, found, err := m.api.GetReplicaCommitmentByID(ctx.Context(), sector.SectorNum)
+func (m *Sealing) checkPreCommitted(ctx statemachine.Context, sector SectorInfo) ([]byte, bool, error) {
+	tok, err := m.api.GetChainHead(ctx.Context())
 	if err != nil {
-		log.Errorf("handleSealFailed(%d): temp error: %+v", sector.SectorNum, err)
+		return nil, false, xerrors.Errorf("failed to get chain head: %w", err)
+	}
+
+	sealedCID, found, err := m.api.GetSealedCID(ctx.Context(), tok, sector.SectorNum)
+	if err != nil {
+		log.Errorf("checkPreCommitted(%d): temp error: %+v", sector.SectorNum, err)
+		return nil, false, err
+	}
+
+	commR, err := commcid.CIDToReplicaCommitmentV1(sealedCID)
+	if err != nil {
+		log.Errorf("failed to map from sealed CID to CommR: %+v", sector.SectorNum, err)
 		return nil, false, err
 	}
 
