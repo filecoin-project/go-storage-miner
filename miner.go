@@ -13,7 +13,6 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/go-storage-miner/apis/sectorbuilder"
-	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 	"github.com/filecoin-project/go-storage-miner/sealing"
 )
 
@@ -26,26 +25,22 @@ type Miner struct {
 	ds      datastore.Batching
 	sealing *sealing.Sealing
 
-	// used to compute self-deal schedule (e.g. start and end epochs)
-	selfDealPolicy selfdeal.Policy
-
 	// onSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
 	onSectorUpdated func(abi.SectorNumber, sealing.SectorState)
 }
 
-func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, sdp, nil)
+func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
 	return &Miner{
 		api:             api,
 		maddr:           maddr,
 		sb:              sb,
 		ds:              ds,
 		sealing:         nil,
-		selfDealPolicy:  sdp,
 		onSectorUpdated: onSectorUpdated,
 	}, nil
 }
@@ -60,9 +55,9 @@ func (m *Miner) Run(ctx context.Context) error {
 	}
 
 	if m.onSectorUpdated != nil {
-		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.selfDealPolicy, m.onSectorUpdated)
+		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
 	} else {
-		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr, m.selfDealPolicy)
+		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr)
 	}
 
 	go m.sealing.Run(ctx) // nolint: errcheck

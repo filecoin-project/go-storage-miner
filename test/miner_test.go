@@ -32,9 +32,6 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	maddr, err := address.NewIDAddress(55)
 	require.NoError(t, err)
 
-	api := newFakeNode()
-	sdp := selfdeal.NewFixedDurationPolicy(api, 10, 100)
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -46,7 +43,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 		then(sealing.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(api, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(newFakeNode(), datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -105,8 +102,6 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		return n
 	}()
 
-	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
-
 	sb := &fakeSectorBuilder{}
 
 	// a sequence of sector state transitions we expect to observe
@@ -123,7 +118,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 		then(sealing.Proving).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, &sdp, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), sb, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -167,8 +162,6 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		return n
 	}()
 
-	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -176,7 +169,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 		then(sealing.PreCommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -212,8 +205,6 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		return n
 	}()
 
-	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -223,7 +214,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 		then(sealing.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
@@ -259,8 +250,6 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		return n
 	}()
 
-	sdp := selfdeal.NewFixedDurationPolicy(fakeNode, 10, 100)
-
 	// a sequence of sector state transitions we expect to observe
 	onSectorUpdatedFunc, getSequenceStatusFunc, doneCh := begin(t, DefaultSectorID, sealing.Packing).
 		then(sealing.Unsealed).
@@ -271,7 +260,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 		then(sealing.CommitFailed).
 		end()
 
-	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, &sdp, onSectorUpdatedFunc)
+	miner, err := storage.NewMinerWithOnSectorUpdated(fakeNode, datastore.NewMapDatastore(), &fakeSectorBuilder{}, maddr, onSectorUpdatedFunc)
 	require.NoError(t, err)
 
 	defer func() {
