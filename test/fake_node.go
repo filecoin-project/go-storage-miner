@@ -3,9 +3,8 @@ package test
 import (
 	"context"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
-
 	"github.com/filecoin-project/go-address"
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"

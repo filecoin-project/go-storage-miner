@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"time"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
-
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-statemachine"
 	"golang.org/x/xerrors"
 )
