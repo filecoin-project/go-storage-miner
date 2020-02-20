@@ -73,11 +73,13 @@ func (p *PieceWithDealInfo) SB() (out sectorbuilder.PublicPieceInfo, err error) 
 	return out, nil
 }
 
+// PieceWithOptionalDealInfo is a tuple of piece info and optional deal
 type PieceWithOptionalDealInfo struct {
 	Piece    abi.PieceInfo
 	DealInfo *DealInfo // nil for pieces which do not yet appear in self-deals
 }
 
+// DealInfo is a tuple of deal identity and its schedule
 type DealInfo struct {
 	DealID       abi.DealID
 	DealSchedule DealSchedule
