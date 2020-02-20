@@ -48,30 +48,17 @@ type Sealing struct {
 	runCompleteWg sync.WaitGroup
 }
 
-func NewSealing(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address) *Sealing {
-	return NewSealingWithOnSectorUpdated(api, sb, ds, maddr, nil)
+func NewSealing(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy) *Sealing {
+	return NewSealingWithOnSectorUpdated(api, sb, ds, maddr, sdp, nil)
 }
 
-func NewSealingWithOnSectorUpdated(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
-	// TODO: This value represents the quantity of epochs into the future (from
-	// the chain head-epoch) at which point we expect the pieces in a newly
-	// created self-deal to have been sealed into a proven sector, which will
-	// be a function of sector size (among other things). For now, we pick a
-	// number sufficiently large as to ensure that a miner will have sufficient
-	// time to replicate and prove a 16MiB self deal-packed sector.
-	commitDelay := abi.ChainEpoch(2 * 60 * 24) // ~1 day into the future, assuming 30s block time
-
-	// A quantity of epochs for which the self-deal is valid.
-	duration := abi.ChainEpoch(2 * 60 * 24) // ~1 day
-
-	sdp := selfdeal.NewBasicPolicy(api, commitDelay, duration)
-
+func NewSealingWithOnSectorUpdated(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
 		sb:              sb,
 		onSectorUpdated: onSectorUpdated,
-		selfDealPolicy:  &sdp,
+		selfDealPolicy:  sdp,
 	}
 
 	s.runCompleteWg.Add(1)

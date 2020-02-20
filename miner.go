@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 
+	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
@@ -24,25 +26,28 @@ type Miner struct {
 	sb      sectorbuilder.Interface
 	ds      datastore.Batching
 	sealing *sealing.Sealing
-
-	// onSectorUpdated is called each time a sector transitions from one state
-	// to some other state, if defined. It is non-nil during test.
-	onSectorUpdated func(abi.SectorNumber, sealing.SectorState)
 }
 
-func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, nil)
+func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, sdp, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
-	return &Miner{
-		api:             api,
-		maddr:           maddr,
-		sb:              sb,
-		ds:              ds,
-		sealing:         nil,
-		onSectorUpdated: onSectorUpdated,
-	}, nil
+func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
+	m := &Miner{
+		api:     api,
+		maddr:   maddr,
+		sb:      sb,
+		ds:      ds,
+		sealing: nil,
+	}
+
+	if onSectorUpdated != nil {
+		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, sdp, onSectorUpdated)
+	} else {
+		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr, sdp)
+	}
+
+	return m, nil
 }
 
 // Run starts the Miner, which causes it (and its collaborating objects) to
@@ -52,12 +57,6 @@ func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb s
 func (m *Miner) Run(ctx context.Context) error {
 	if err := m.runPreflightChecks(ctx); err != nil {
 		return xerrors.Errorf("miner preflight checks failed: %w", err)
-	}
-
-	if m.onSectorUpdated != nil {
-		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
-	} else {
-		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr)
 	}
 
 	go m.sealing.Run(ctx) // nolint: errcheck
