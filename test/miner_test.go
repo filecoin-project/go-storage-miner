@@ -15,16 +15,22 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
-	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 	"github.com/filecoin-project/go-storage-miner/sealing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const DefaultDealID = 42
 const DefaultSectorID = 42
 const UserBytesOneKiBSector = 1016 // also known as "unpadded" bytes
+
+var DefaultDealInfo = node.DealInfo{
+	DealID: 42,
+	DealSchedule: node.DealSchedule{
+		StartEpoch: 100,
+		EndEpoch:   200,
+	},
+}
 
 func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	ctx := context.Background()
@@ -54,7 +60,7 @@ func TestSuccessfulPieceSealingFlow(t *testing.T) {
 	require.NoError(t, miner.Run(ctx))
 
 	// kick off the state machine
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealInfo))
 
 	select {
 	case <-doneCh:
@@ -73,7 +79,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 	// we'll assert the contents of these slices at the end of the test
 	var selfDealPieceSizes []abi.UnpaddedPieceSize
-	var selfDealSchedule selfdeal.Schedule
+	var selfDealSchedule node.DealSchedule
 
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
@@ -87,7 +93,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			selfDealPieceSizes = append(selfDealPieceSizes, info[0].Size.Unpadded())
 			selfDealPieceSizes = append(selfDealPieceSizes, info[1].Size.Unpadded())
 
-			selfDealSchedule = selfdeal.Schedule{
+			selfDealSchedule = node.DealSchedule{
 				StartEpoch: start,
 				EndEpoch:   end,
 			}
@@ -131,7 +137,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, pieceSize, pieceReader, sectorID, DefaultDealID))
+	require.NoError(t, miner.SealPiece(ctx, pieceSize, pieceReader, sectorID, DefaultDealInfo))
 
 	select {
 	case <-doneCh:
@@ -155,7 +161,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (i cid.Cid, e error) {
+		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (i cid.Cid, e error) {
 			return cid.Undef, errors.New("expected error")
 		}
 
@@ -178,7 +184,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealInfo))
 
 	select {
 	case <-doneCh:
@@ -223,7 +229,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealInfo))
 
 	select {
 	case <-doneCh:
@@ -269,7 +275,7 @@ func TestHandlesCommitSectorMessageWaitFailure(t *testing.T) {
 
 	// kick off state transitions
 	require.NoError(t, miner.Run(ctx))
-	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealID))
+	require.NoError(t, miner.SealPiece(ctx, UserBytesOneKiBSector, io.LimitReader(rand.New(rand.NewSource(42)), int64(UserBytesOneKiBSector)), DefaultSectorID, DefaultDealInfo))
 
 	select {
 	case <-doneCh:

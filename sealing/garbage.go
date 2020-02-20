@@ -8,7 +8,6 @@ import (
 	"runtime"
 
 	commcid "github.com/filecoin-project/go-fil-commcid"
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
@@ -22,7 +21,7 @@ func (m *Sealing) pledgeReader(size abi.UnpaddedPieceSize, parts uint64) io.Read
 		parts = n / 127
 	}
 
-	piece := sectorbuilder.UserBytesForSectorSize(abi.SectorSize((n/127 + n) / parts))
+	piece := abi.PaddedPieceSize(abi.SectorSize((n/127 + n) / parts)).Unpadded()
 
 	readers := make([]io.Reader, parts)
 	for i := range readers {
@@ -32,32 +31,61 @@ func (m *Sealing) pledgeReader(size abi.UnpaddedPieceSize, parts uint64) io.Read
 	return io.MultiReader(readers...)
 }
 
-func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existingPieceSizes []abi.UnpaddedPieceSize, sizes ...abi.UnpaddedPieceSize) ([]node.Piece, error) {
-	if len(sizes) == 0 {
+// pledgeSector writes junk (filler) pieces to the provided sector and creates
+// self-deals for those junk pieces. Junk pieces are written to the target
+// sector respecting alignment of the sector's existing pieces. After the sector
+// has been completely filled (with junk and/or client data), a slice of all
+// piece and deal metadata associated with that sector is returned.
+func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existing []node.PieceWithDealInfo, fillerPieceSizes ...abi.UnpaddedPieceSize) ([]node.PieceWithDealInfo, error) {
+	if len(fillerPieceSizes) == 0 {
 		return nil, nil
 	}
 
-	log.Infof("Pledge %d, contains %+v", sectorNum, existingPieceSizes)
+	log.Infof("Pledge %d, contains %+v", sectorNum, existing)
 
-	pieces := make([]abi.PieceInfo, len(sizes))
-	for i, size := range sizes {
-		commP, err := m.FastPledgeCommitment(size, uint64(1))
+	fillers := make([]node.PieceWithOptionalDealInfo, len(fillerPieceSizes))
+	for idx := range fillerPieceSizes {
+		commP, err := m.FastPledgeCommitment(fillerPieceSizes[idx], uint64(1))
 		if err != nil {
 			return nil, handle("failed to generate pledge commitment: ", err)
 		}
 
-		pieces[i] = abi.PieceInfo{
-			Size:     size.Padded(),
-			PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
+		fillers[idx] = node.PieceWithOptionalDealInfo{
+			Piece: abi.PieceInfo{
+				Size:     fillerPieceSizes[idx].Padded(),
+				PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
+			},
+			DealInfo: nil,
 		}
 	}
 
-	schedule, err := m.selfDealPolicy.Schedule(ctx, pieces...)
+	// the self-deal scheduling algorithm needs to know about all of the pieces
+	// to be written into the sector - both self-deal junk pieces and pieces
+	// received from consummating storage deals
+	existingPrime := make([]node.PieceWithOptionalDealInfo, len(existing))
+	for idx := range existingPrime {
+		existingPrime[idx] = node.PieceWithOptionalDealInfo{
+			Piece:    existing[idx].Piece,
+			DealInfo: &existing[idx].DealInfo,
+		}
+	}
+
+	schedule, err := m.selfDealPolicy.Schedule(ctx, append(fillers, existingPrime...)...)
 	if err != nil {
 		return nil, handle("failed to create self-deal schedule", err)
 	}
 
-	mcid, err := m.api.SendSelfDeals(ctx, schedule.StartEpoch, schedule.EndEpoch, pieces...)
+	// we send self-deals only for the filler pieces, as the other pieces are
+	// already associated with on-chain deals
+	fillersPrime := make([]abi.PieceInfo, len(fillers))
+	for idx := range fillersPrime {
+		fillersPrime[idx] = abi.PieceInfo{
+			Size:     fillers[idx].Piece.Size,
+			PieceCID: fillers[idx].Piece.PieceCID,
+		}
+	}
+
+	mcid, err := m.api.SendSelfDeals(ctx, schedule.StartEpoch, schedule.EndEpoch, fillersPrime...)
 	if err != nil {
 		return nil, handle("failed to send self-deals to node", err)
 	}
@@ -71,59 +99,60 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		return nil, handle("publishing deal failed: exit %d", exitCode)
 	}
 
-	if len(dealIDs) != len(sizes) {
-		return nil, handle("got unexpected number of deal IDs from PublishStorageDeals (len(dealIDs)=%d != len(sizes)=%d)", len(dealIDs), len(sizes))
+	if len(dealIDs) != len(fillerPieceSizes) {
+		return nil, handle("got unexpected number of deal IDs from PublishStorageDeals (len(dealIDs)=%d != len(fillerPieceSizes)=%d)", len(dealIDs), len(fillerPieceSizes))
 	}
 
-	out := make([]node.Piece, len(sizes))
-	for i, size := range sizes {
-		ppi, err := m.sb.AddPiece(ctx, size, sectorNum, m.pledgeReader(size, uint64(runtime.NumCPU())), existingPieceSizes)
+	// the sizes of the pieces already written to the sector into which the
+	// junk pieces will be written
+	existingSizes := make([]abi.UnpaddedPieceSize, len(existing))
+	for idx := range existingSizes {
+		existingSizes[idx] = existing[idx].Piece.Size.Unpadded()
+	}
+
+	var out []node.PieceWithDealInfo
+
+	for idx := range fillerPieceSizes {
+		ppi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
 		if err != nil {
 			return nil, handle("add piece: %w", err)
 		}
 
-		existingPieceSizes = append(existingPieceSizes, size)
+		existingSizes = append(existingSizes, fillerPieceSizes[idx])
 
-		out[i] = node.Piece{
-			DealID:   dealIDs[i],
-			Size:     ppi.Size.Padded(),
-			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
-		}
+		out = append(out, node.PieceWithDealInfo{
+			Piece: abi.PieceInfo{
+				Size:     ppi.Size.Padded(),
+				PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
+			},
+			DealInfo: node.DealInfo{
+				DealID:       dealIDs[idx],
+				DealSchedule: schedule,
+			},
+		})
 	}
+
+	out = append(out, existing...)
 
 	return out, nil
 }
 
-func (m *Sealing) PledgeSector() error {
-	go func() {
-		ctx := context.TODO() // we can't use the context from command which invokes
-		// this, as we run everything here async, and it's cancelled when the
-		// command exits
+func (m *Sealing) PledgeSector(ctx context.Context) error {
+	size := abi.PaddedPieceSize(m.sb.SectorSize()).Unpadded()
 
-		size := sectorbuilder.UserBytesForSectorSize(m.sb.SectorSize())
+	num, err := m.sb.AcquireSectorNumber()
+	if err != nil {
+		return handle("failed to acquire sector number: %w", err)
+	}
 
-		num, err := m.sb.AcquireSectorNumber()
-		if err != nil {
-			log.Errorf("%+v", err)
-			return
-		}
+	pieces, err := m.pledgeSector(ctx, num, []node.PieceWithDealInfo{}, size)
+	if err != nil {
+		return handle("pledge sector failed: %w", err)
+	}
 
-		pieces, err := m.pledgeSector(ctx, num, []abi.UnpaddedPieceSize{}, size)
-		if err != nil {
-			log.Errorf("%+v", err)
-			return
-		}
+	if err := m.newSector(ctx, num, pieces...); err != nil {
+		return handle("failed to create new sector: %w", err)
+	}
 
-		ppi, err := pieces[0].SB()
-		if err != nil {
-			log.Errorf("%+v", err)
-			return
-		}
-
-		if err := m.newSector(context.TODO(), num, pieces[0].DealID, ppi); err != nil {
-			log.Errorf("%+v", err)
-			return
-		}
-	}()
 	return nil
 }

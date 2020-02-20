@@ -5,12 +5,12 @@ import (
 	"io"
 	"sync"
 
+	commcid "github.com/filecoin-project/go-fil-commcid"
+
 	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 
 	"github.com/filecoin-project/go-address"
-	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-padreader"
-	sectorbuilder2 "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
@@ -64,7 +64,7 @@ func NewSealingWithOnSectorUpdated(api node.Interface, sb sectorbuilder.Interfac
 	// A quantity of epochs for which the self-deal is valid.
 	duration := abi.ChainEpoch(2 * 60 * 24) // ~1 day
 
-	sdp := selfdeal.NewFixedDurationPolicy(api, commitDelay, duration)
+	sdp := selfdeal.NewBasicPolicy(api, commitDelay, duration)
 
 	s := &Sealing{
 		api:             api,
@@ -112,30 +112,30 @@ func (m *Sealing) AllocatePiece(size abi.UnpaddedPieceSize) (sectorNum abi.Secto
 	return sid, 0, nil
 }
 
-func (m *Sealing) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, dealID abi.DealID) error {
-	log.Infof("Seal piece for deal %d", dealID)
+func (m *Sealing) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, dealInfo node.DealInfo) error {
+	log.Infof("Seal piece for deal %d", dealInfo.DealID)
 
 	ppi, err := m.sb.AddPiece(ctx, size, sectorNum, r, []abi.UnpaddedPieceSize{})
 	if err != nil {
 		return xerrors.Errorf("adding piece to sector: %w", err)
 	}
 
-	return m.newSector(ctx, sectorNum, dealID, ppi)
+	return m.newSector(ctx, sectorNum, node.PieceWithDealInfo{
+		Piece: abi.PieceInfo{
+			Size:     size.Padded(),
+			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
+		},
+		DealInfo: dealInfo,
+	})
 }
 
-func (m *Sealing) newSector(ctx context.Context, sectorNum abi.SectorNumber, dealID abi.DealID, ppi sectorbuilder2.PublicPieceInfo) error {
+func (m *Sealing) newSector(ctx context.Context, sectorNum abi.SectorNumber, piecesInSector ...node.PieceWithDealInfo) error {
 	m.runCompleteWg.Wait()
 
 	log.Infof("Start sealing %d", sectorNum)
 
 	return m.sectors.Send(uint64(sectorNum), SectorStart{
-		num: sectorNum,
-		pieces: []node.Piece{
-			{
-				DealID:   dealID,
-				Size:     ppi.Size.Padded(),
-				PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
-			},
-		},
+		num:    sectorNum,
+		pieces: piecesInSector,
 	})
 }

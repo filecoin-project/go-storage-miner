@@ -39,13 +39,9 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) err
 		fillerPieceSizes[idx] = fillerSizes[idx]
 	}
 
-	existingPadded := sector.existingPieces()
-	existingUnpadded := make([]abi.UnpaddedPieceSize, len(existingPadded))
-	for idx := range existingPadded {
-		existingUnpadded[idx] = existingPadded[idx].Unpadded()
-	}
-
-	pieces, err := m.pledgeSector(ctx.Context(), sector.SectorNum, existingUnpadded, fillerPieceSizes...)
+	// fill the remaining space in the sector with junk deal-pieces, and ensure
+	// that self-deals are created for each piece
+	pieces, err := m.pledgeSector(ctx.Context(), sector.SectorNum, sector.Pieces, fillerPieceSizes...)
 	if err != nil {
 		return xerrors.Errorf("filling up the sector (%v): %w", fillerSizes, err)
 	}

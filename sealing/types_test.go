@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/filecoin-project/specs-actors/actors/abi"
+
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 
 	cborutil "github.com/filecoin-project/go-cbor-util"
@@ -18,10 +20,18 @@ func TestSectorInfoSerialization(t *testing.T) {
 		State:     123,
 		SectorNum: 234,
 		Nonce:     345,
-		Pieces: []node.Piece{{
-			DealID:   1234,
-			Size:     5,
-			PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
+		Pieces: []node.PieceWithDealInfo{node.PieceWithDealInfo{
+			Piece: abi.PieceInfo{
+				Size:     5,
+				PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
+			},
+			DealInfo: node.DealInfo{
+				DealID: 1234,
+				DealSchedule: node.DealSchedule{
+					StartEpoch: 100,
+					EndEpoch:   1000,
+				},
+			},
 		}},
 		CommD: []byte{32, 4},
 		CommR: nil,

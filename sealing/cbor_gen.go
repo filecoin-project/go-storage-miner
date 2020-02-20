@@ -71,7 +71,7 @@ func (t *SectorInfo) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.Pieces ([]node.Piece) (slice)
+	// t.Pieces ([]node.PieceWithDealInfo) (slice)
 	if len("Pieces") > cbg.MaxLength {
 		return xerrors.Errorf("Value in field \"Pieces\" was too long")
 	}
@@ -376,7 +376,7 @@ func (t *SectorInfo) UnmarshalCBOR(r io.Reader) error {
 				return fmt.Errorf("wrong type for uint64 field")
 			}
 			t.Nonce = uint64(extra)
-			// t.Pieces ([]node.Piece) (slice)
+			// t.Pieces ([]node.PieceWithDealInfo) (slice)
 		case "Pieces":
 
 			maj, extra, err = cbg.CborReadHeader(br)
@@ -392,11 +392,11 @@ func (t *SectorInfo) UnmarshalCBOR(r io.Reader) error {
 				return fmt.Errorf("expected cbor array")
 			}
 			if extra > 0 {
-				t.Pieces = make([]node.Piece, extra)
+				t.Pieces = make([]node.PieceWithDealInfo, extra)
 			}
 			for i := 0; i < int(extra); i++ {
 
-				var v node.Piece
+				var v node.PieceWithDealInfo
 				if err := v.UnmarshalCBOR(br); err != nil {
 					return err
 				}

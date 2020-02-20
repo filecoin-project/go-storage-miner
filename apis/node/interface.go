@@ -23,7 +23,7 @@ type Interface interface {
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
-	SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket SealTicket, pieces ...Piece) (cid.Cid, error)
+	SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket SealTicket, pieces ...PieceWithDealInfo) (cid.Cid, error)
 
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
@@ -55,7 +55,7 @@ type Interface interface {
 
 	// CheckPieces ensures that the provides pieces' metadata exist in
 	// not yet-expired on-chain storage deals.
-	CheckPieces(ctx context.Context, sectorNum abi.SectorNumber, pieces []Piece) *CheckPiecesError
+	CheckPieces(ctx context.Context, sectorNum abi.SectorNumber, pieces []PieceWithDealInfo) *CheckPiecesError
 
 	// CheckSealing ensures that the given data commitment matches the
 	// commitment of the given pieces associated with the given deals. The

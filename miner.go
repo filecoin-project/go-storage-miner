@@ -67,8 +67,8 @@ func (m *Miner) Run(ctx context.Context) error {
 
 // SealPiece writes the provided piece to a newly-created sector which it
 // immediately seals.
-func (m *Miner) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, dealID abi.DealID) error {
-	return m.sealing.SealPiece(ctx, size, r, sectorNum, dealID)
+func (m *Miner) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, deal node.DealInfo) error {
+	return m.sealing.SealPiece(ctx, size, r, sectorNum, deal)
 }
 
 // Stop causes the miner to stop listening for sector state transitions. It is

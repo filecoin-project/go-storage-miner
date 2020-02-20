@@ -3,17 +3,13 @@ package selfdeal
 import (
 	"context"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/filecoin-project/go-storage-miner/apis/node"
+
+	logging "github.com/ipfs/go-log"
 )
 
-// Schedule communicates the time bounds of a self-deal. The self-deal must
-// appear in a sealed (proven) sector no later than StartEpoch, otherwise it
-// is invalid.
-type Schedule struct {
-	StartEpoch abi.ChainEpoch
-	EndEpoch   abi.ChainEpoch
-}
+var log = logging.Logger("selfdeals")
 
 type Policy interface {
-	Schedule(ctx context.Context, pieces ...abi.PieceInfo) (Schedule, error)
+	Schedule(ctx context.Context, pieces ...node.PieceWithOptionalDealInfo) (node.DealSchedule, error)
 }

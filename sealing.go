@@ -32,8 +32,8 @@ func (m *Miner) GetSectorInfo(sectorNum abi.SectorNumber) (sealing2.SectorInfo, 
 
 // PledgeSector allocates a new sector, fills it with self-deal junk, and
 // seals that sector.
-func (m *Miner) PledgeSector() error {
-	return m.sealing.PledgeSector()
+func (m *Miner) PledgeSector(ctx context.Context) error {
+	return m.sealing.PledgeSector(ctx)
 }
 
 // ForceSectorState puts a sector with given ID into the given state.

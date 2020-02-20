@@ -11,8 +11,10 @@ import (
 )
 
 func main() {
-	err := gen.WriteMapEncodersToFile("./apis/node/cbor_gen.go", "node",
-		node.Piece{},
+	err := gen.WriteTupleEncodersToFile("./apis/node/cbor_gen.go", "node",
+		node.DealInfo{},
+		node.DealSchedule{},
+		node.PieceWithDealInfo{},
 		node.SealTicket{},
 		node.SealSeed{},
 	)

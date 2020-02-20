@@ -4,7 +4,6 @@ import (
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
-	"github.com/ipfs/go-cid"
 	"golang.org/x/xerrors"
 )
 
@@ -56,16 +55,15 @@ func (t *SealSeed) Equals(o *SealSeed) bool {
 	return string(t.TicketBytes) == string(o.TicketBytes) && t.BlockHeight == o.BlockHeight
 }
 
-type Piece struct {
-	DealID   abi.DealID
-	Size     abi.PaddedPieceSize
-	PieceCID cid.Cid
+type PieceWithDealInfo struct {
+	Piece    abi.PieceInfo
+	DealInfo DealInfo
 }
 
-func (p *Piece) SB() (out sectorbuilder.PublicPieceInfo, err error) {
-	out.Size = p.Size.Unpadded()
+func (p *PieceWithDealInfo) SB() (out sectorbuilder.PublicPieceInfo, err error) {
+	out.Size = p.Piece.Size.Unpadded()
 
-	commP, err := commcid.CIDToPieceCommitmentV1(p.PieceCID)
+	commP, err := commcid.CIDToPieceCommitmentV1(p.Piece.PieceCID)
 	if err != nil {
 		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("failed to map CID to CommP: ", err)
 	}
@@ -73,4 +71,22 @@ func (p *Piece) SB() (out sectorbuilder.PublicPieceInfo, err error) {
 	copy(out.CommP[:], commP)
 
 	return out, nil
+}
+
+type PieceWithOptionalDealInfo struct {
+	Piece    abi.PieceInfo
+	DealInfo *DealInfo // nil for pieces which do not yet appear in self-deals
+}
+
+type DealInfo struct {
+	DealID       abi.DealID
+	DealSchedule DealSchedule
+}
+
+// DealSchedule communicates the time interval of a stoage deal. The deal must
+// appear in a sealed (proven) sector no later than StartEpoch, otherwise it
+// is invalid.
+type DealSchedule struct {
+	StartEpoch abi.ChainEpoch
+	EndEpoch   abi.ChainEpoch
 }
