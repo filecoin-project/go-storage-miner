@@ -29,7 +29,7 @@ func NewBasicPolicy(api Chain, delay abi.ChainEpoch, duration abi.ChainEpoch) Ba
 	return BasicPolicy{api: api, provingDelay: delay, duration: duration}
 }
 
-// DealSchedule produces the deal terms for this fixed duration self-deal policy.
+// Schedule produces the deal terms for this fixed duration self-deal policy.
 func (p *BasicPolicy) Schedule(ctx context.Context, pieces ...node.PieceWithOptionalDealInfo) (node.DealSchedule, error) {
 	_, epoch, err := p.api.GetChainHead(ctx)
 	if err != nil {
