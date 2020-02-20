@@ -36,8 +36,8 @@ func (p *BasicPolicy) Schedule(ctx context.Context, pieces ...node.PieceWithOpti
 		return node.DealSchedule{}, err
 	}
 
-	var x *abi.ChainEpoch
-	var y *abi.ChainEpoch
+	var start *abi.ChainEpoch
+	var end *abi.ChainEpoch
 
 	for _, p := range pieces {
 		if p.DealInfo != nil {
@@ -51,30 +51,26 @@ func (p *BasicPolicy) Schedule(ctx context.Context, pieces ...node.PieceWithOpti
 				continue
 			}
 
-			if x == nil && y == nil {
-				x = &p.DealInfo.DealSchedule.StartEpoch
-				y = &p.DealInfo.DealSchedule.EndEpoch
+			if start == nil && end == nil {
+				start = &p.DealInfo.DealSchedule.StartEpoch
+				end = &p.DealInfo.DealSchedule.EndEpoch
 				continue
 			}
 
-			if *x > p.DealInfo.DealSchedule.StartEpoch {
-				x = &p.DealInfo.DealSchedule.StartEpoch
+			if *start > p.DealInfo.DealSchedule.StartEpoch {
+				start = &p.DealInfo.DealSchedule.StartEpoch
 			}
 
-			if *y < p.DealInfo.DealSchedule.EndEpoch {
-				y = &p.DealInfo.DealSchedule.EndEpoch
+			if *end < p.DealInfo.DealSchedule.EndEpoch {
+				end = &p.DealInfo.DealSchedule.EndEpoch
 			}
 		}
 	}
 
-	if x != nil && *x < epoch {
-		log.Warnf("miner has already missed deal start epoch %d for piece ")
-	}
-
-	if x != nil || y != nil {
+	if start != nil || end != nil {
 		return node.DealSchedule{
-			StartEpoch: *x,
-			EndEpoch:   *y,
+			StartEpoch: *start,
+			EndEpoch:   *end,
 		}, nil
 	}
 
