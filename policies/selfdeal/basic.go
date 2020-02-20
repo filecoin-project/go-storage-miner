@@ -51,31 +51,28 @@ func (p *BasicPolicy) Schedule(ctx context.Context, pieces ...node.PieceWithOpti
 				continue
 			}
 
-			if start == nil && end == nil {
-				start = &p.DealInfo.DealSchedule.StartEpoch
-				end = &p.DealInfo.DealSchedule.EndEpoch
-				continue
-			}
-
-			if *start > p.DealInfo.DealSchedule.StartEpoch {
+			if start == nil || *start > p.DealInfo.DealSchedule.StartEpoch {
 				start = &p.DealInfo.DealSchedule.StartEpoch
 			}
 
-			if *end < p.DealInfo.DealSchedule.EndEpoch {
+			if end == nil || *end < p.DealInfo.DealSchedule.EndEpoch {
 				end = &p.DealInfo.DealSchedule.EndEpoch
 			}
 		}
 	}
 
-	if start != nil || end != nil {
-		return node.DealSchedule{
-			StartEpoch: *start,
-			EndEpoch:   *end,
-		}, nil
+	if start == nil {
+		tmp := epoch + p.provingDelay
+		start = &tmp
+	}
+
+	if end == nil {
+		tmp := epoch + p.provingDelay + p.duration
+		end = &tmp
 	}
 
 	return node.DealSchedule{
-		StartEpoch: epoch + p.provingDelay,
-		EndEpoch:   epoch + p.provingDelay + p.duration,
+		StartEpoch: *start,
+		EndEpoch:   *end,
 	}, nil
 }
