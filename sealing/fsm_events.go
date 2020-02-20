@@ -1,9 +1,10 @@
 package sealing
 
 import (
-	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 )
 
 type mutator interface {
@@ -46,7 +47,7 @@ func (evt SectorForceState) applyGlobal(state *SectorInfo) bool {
 
 type SectorStart struct {
 	num    abi.SectorNumber
-	pieces []node.Piece
+	pieces []node.PieceWithDealInfo
 }
 
 func (evt SectorStart) apply(state *SectorInfo) {
@@ -54,7 +55,7 @@ func (evt SectorStart) apply(state *SectorInfo) {
 	state.Pieces = evt.pieces
 }
 
-type SectorPacked struct{ pieces []node.Piece }
+type SectorPacked struct{ pieces []node.PieceWithDealInfo }
 
 func (evt SectorPacked) apply(state *SectorInfo) {
 	state.Pieces = append(state.Pieces, evt.pieces...)

@@ -25,7 +25,7 @@ type SectorInfo struct {
 
 	// Packing
 
-	Pieces []node.Piece
+	Pieces []node.PieceWithDealInfo
 
 	// PreCommit
 	CommD  []byte
@@ -67,7 +67,7 @@ func (t *SectorInfo) pieceInfos() ([]sectorbuilder.PublicPieceInfo, error) {
 func (t *SectorInfo) deals() []abi.DealID {
 	out := make([]abi.DealID, len(t.Pieces))
 	for i, piece := range t.Pieces {
-		out[i] = piece.DealID
+		out[i] = piece.DealInfo.DealID
 	}
 
 	return out
@@ -76,7 +76,7 @@ func (t *SectorInfo) deals() []abi.DealID {
 func (t *SectorInfo) existingPieces() []abi.PaddedPieceSize {
 	out := make([]abi.PaddedPieceSize, len(t.Pieces))
 	for i, piece := range t.Pieces {
-		out[i] = piece.Size
+		out[i] = piece.Piece.Size
 	}
 
 	return out

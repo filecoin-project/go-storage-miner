@@ -14,17 +14,17 @@ import (
 )
 
 type fakeNode struct {
-	checkPieces              func(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.Piece) *node.CheckPiecesError
+	checkPieces              func(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.PieceWithDealInfo) *node.CheckPiecesError
 	checkSealing             func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError
-	getChainHead             func(ctx context.Context) (node.TipSetToken, error)
+	getChainHead             func(ctx context.Context) (node.TipSetToken, abi.ChainEpoch, error)
 	getMinerWorkerAddress    func(context.Context, node.TipSetToken) (address.Address, error)
 	getSealedCID             func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError)
 	getSealTicket            func(context.Context, node.TipSetToken) (node.SealTicket, error)
-	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error)
+	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error)
 	sendReportFaults         func(ctx context.Context, sectorNums ...abi.SectorNumber) (cid.Cid, error)
-	sendSelfDeals            func(context.Context, ...abi.PieceInfo) (cid.Cid, error)
+	sendSelfDeals            func(context.Context, abi.ChainEpoch, abi.ChainEpoch, ...abi.PieceInfo) (cid.Cid, error)
 	waitForProveCommitSector func(context.Context, cid.Cid) (exitCode uint8, err error)
 	waitForReportFaults      func(context.Context, cid.Cid) (uint8, error)
 	waitForSelfDeals         func(context.Context, cid.Cid) ([]abi.DealID, uint8, error)
@@ -33,14 +33,14 @@ type fakeNode struct {
 
 func newFakeNode() *fakeNode {
 	return &fakeNode{
-		checkPieces: func(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.Piece) *node.CheckPiecesError {
+		checkPieces: func(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.PieceWithDealInfo) *node.CheckPiecesError {
 			return nil
 		},
 		checkSealing: func(ctx context.Context, commD []byte, dealIDs []abi.DealID, ticket node.SealTicket) *node.CheckSealingError {
 			return nil
 		},
-		getChainHead: func(ctx context.Context) (token node.TipSetToken, err error) {
-			return node.TipSetToken{1, 2, 3}, nil
+		getChainHead: func(ctx context.Context) (token node.TipSetToken, epoch abi.ChainEpoch, err error) {
+			return node.TipSetToken{1, 2, 3}, 42, nil
 		},
 		getMinerWorkerAddress: func(ctx context.Context, tok node.TipSetToken) (a address.Address, err error) {
 			return address.NewIDAddress(42)
@@ -66,13 +66,13 @@ func newFakeNode() *fakeNode {
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
-		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error) {
+		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
 			return createCidForTesting(42), nil
 		},
 		sendReportFaults: func(ctx context.Context, sectorNumbers ...abi.SectorNumber) (i cid.Cid, e error) {
 			return createCidForTesting(42), nil
 		},
-		sendSelfDeals: func(ctx context.Context, info ...abi.PieceInfo) (c cid.Cid, err error) {
+		sendSelfDeals: func(ctx context.Context, start, end abi.ChainEpoch, info ...abi.PieceInfo) (c cid.Cid, err error) {
 			panic("by default, no self deals will be made")
 		},
 		waitForProveCommitSector: func(context.Context, cid.Cid) (exitCode uint8, err error) {
@@ -93,7 +93,7 @@ func newFakeNode() *fakeNode {
 	}
 }
 
-func (f *fakeNode) CheckPieces(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.Piece) *node.CheckPiecesError {
+func (f *fakeNode) CheckPieces(ctx context.Context, sectorNum abi.SectorNumber, pieces []node.PieceWithDealInfo) *node.CheckPiecesError {
 	return f.checkPieces(ctx, sectorNum, pieces)
 }
 
@@ -101,7 +101,7 @@ func (f *fakeNode) CheckSealing(ctx context.Context, commD []byte, dealIDs []abi
 	return f.checkSealing(ctx, commD, dealIDs, ticket)
 }
 
-func (f *fakeNode) GetChainHead(ctx context.Context) (node.TipSetToken, error) {
+func (f *fakeNode) GetChainHead(ctx context.Context) (node.TipSetToken, abi.ChainEpoch, error) {
 	return f.getChainHead(ctx)
 }
 
@@ -121,7 +121,7 @@ func (f *fakeNode) GetSealTicket(ctx context.Context, tok node.TipSetToken) (nod
 	return f.getSealTicket(ctx, tok)
 }
 
-func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.Piece) (cid.Cid, error) {
+func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
 	return f.sendPreCommitSector(ctx, sectorNum, commR, ticket, pieces...)
 }
 
@@ -133,8 +133,8 @@ func (f *fakeNode) SendReportFaults(ctx context.Context, sectorNumbers ...abi.Se
 	return f.sendReportFaults(ctx, sectorNumbers...)
 }
 
-func (f *fakeNode) SendSelfDeals(ctx context.Context, pieces ...abi.PieceInfo) (cid.Cid, error) {
-	return f.sendSelfDeals(ctx, pieces...)
+func (f *fakeNode) SendSelfDeals(ctx context.Context, start, end abi.ChainEpoch, pieces ...abi.PieceInfo) (cid.Cid, error) {
+	return f.sendSelfDeals(ctx, start, end, pieces...)
 }
 
 func (f *fakeNode) WaitForProveCommitSector(ctx context.Context, msg cid.Cid) (exitCode uint8, err error) {

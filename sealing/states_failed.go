@@ -28,7 +28,7 @@ func failedCooldown(ctx statemachine.Context, sector SectorInfo) error {
 }
 
 func (m *Sealing) checkPreCommitted(ctx statemachine.Context, sector SectorInfo) ([]byte, bool, error) {
-	tok, err := m.api.GetChainHead(ctx.Context())
+	tok, _, err := m.api.GetChainHead(ctx.Context())
 	if err != nil {
 		return nil, false, xerrors.Errorf("failed to get chain head: %w", err)
 	}

@@ -5,16 +5,17 @@ import (
 	"errors"
 	"io"
 
-	"github.com/filecoin-project/go-storage-miner/apis/node"
-	"github.com/filecoin-project/go-storage-miner/apis/sectorbuilder"
-
-	sealing2 "github.com/filecoin-project/go-storage-miner/sealing"
+	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"golang.org/x/xerrors"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-storage-miner/apis/sectorbuilder"
+	"github.com/filecoin-project/go-storage-miner/sealing"
 )
 
 var log = logging.Logger("storageminer")
@@ -24,26 +25,29 @@ type Miner struct {
 	maddr   address.Address
 	sb      sectorbuilder.Interface
 	ds      datastore.Batching
-	sealing *sealing2.Sealing
-
-	// onSectorUpdated is called each time a sector transitions from one state
-	// to some other state, if defined. It is non-nil during test.
-	onSectorUpdated func(abi.SectorNumber, sealing2.SectorState)
+	sealing *sealing.Sealing
 }
 
-func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, nil)
+func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, sdp, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, onSectorUpdated func(abi.SectorNumber, sealing2.SectorState)) (*Miner, error) {
-	return &Miner{
-		api:             api,
-		maddr:           maddr,
-		sb:              sb,
-		ds:              ds,
-		sealing:         nil,
-		onSectorUpdated: onSectorUpdated,
-	}, nil
+func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
+	m := &Miner{
+		api:     api,
+		maddr:   maddr,
+		sb:      sb,
+		ds:      ds,
+		sealing: nil,
+	}
+
+	if onSectorUpdated != nil {
+		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, sdp, onSectorUpdated)
+	} else {
+		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr, sdp)
+	}
+
+	return m, nil
 }
 
 // Run starts the Miner, which causes it (and its collaborating objects) to
@@ -55,12 +59,6 @@ func (m *Miner) Run(ctx context.Context) error {
 		return xerrors.Errorf("miner preflight checks failed: %w", err)
 	}
 
-	if m.onSectorUpdated != nil {
-		m.sealing = sealing2.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, m.onSectorUpdated)
-	} else {
-		m.sealing = sealing2.NewSealing(m.api, m.sb, m.ds, m.maddr)
-	}
-
 	go m.sealing.Run(ctx) // nolint: errcheck
 
 	return nil
@@ -68,8 +66,8 @@ func (m *Miner) Run(ctx context.Context) error {
 
 // SealPiece writes the provided piece to a newly-created sector which it
 // immediately seals.
-func (m *Miner) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, dealID abi.DealID) error {
-	return m.sealing.SealPiece(ctx, size, r, sectorNum, dealID)
+func (m *Miner) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r io.Reader, sectorNum abi.SectorNumber, deal node.DealInfo) error {
+	return m.sealing.SealPiece(ctx, size, r, sectorNum, deal)
 }
 
 // Stop causes the miner to stop listening for sector state transitions. It is
@@ -81,7 +79,7 @@ func (m *Miner) Stop(ctx context.Context) error {
 }
 
 func (m *Miner) runPreflightChecks(ctx context.Context) error {
-	tok, err := m.api.GetChainHead(ctx)
+	tok, _, err := m.api.GetChainHead(ctx)
 	if err != nil {
 		return xerrors.Errorf("failed to get chain head: %w", err)
 	}
