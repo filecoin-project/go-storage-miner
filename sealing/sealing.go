@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 
+	"github.com/filecoin-project/go-storage-miner/policies/precommit"
+
 	commcid "github.com/filecoin-project/go-fil-commcid"
 
 	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
@@ -38,6 +40,9 @@ type Sealing struct {
 	// value is inherited from the Miner which creates this Sealing struct
 	selfDealPolicy selfdeal.Policy
 
+	// used to compute pre-commit sector expiry
+	preCommitPolicy precommit.Policy
+
 	// onSectorUpdated is called each time a sector transitions from one state
 	// to some other state, if defined. It is non-nil during test.
 	onSectorUpdated func(abi.SectorNumber, SectorState)
@@ -48,17 +53,18 @@ type Sealing struct {
 	runCompleteWg sync.WaitGroup
 }
 
-func NewSealing(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy) *Sealing {
-	return NewSealingWithOnSectorUpdated(api, sb, ds, maddr, sdp, nil)
+func NewSealing(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy, pcp precommit.Policy) *Sealing {
+	return NewSealingWithOnSectorUpdated(api, sb, ds, maddr, sdp, pcp, nil)
 }
 
-func NewSealingWithOnSectorUpdated(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
+func NewSealingWithOnSectorUpdated(api node.Interface, sb sectorbuilder.Interface, ds datastore.Batching, maddr address.Address, sdp selfdeal.Policy, pcp precommit.Policy, onSectorUpdated func(abi.SectorNumber, SectorState)) *Sealing {
 	s := &Sealing{
 		api:             api,
 		maddr:           maddr,
 		sb:              sb,
 		onSectorUpdated: onSectorUpdated,
 		selfDealPolicy:  sdp,
+		preCommitPolicy: pcp,
 	}
 
 	s.runCompleteWg.Add(1)

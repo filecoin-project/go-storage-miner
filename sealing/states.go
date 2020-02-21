@@ -1,6 +1,7 @@
 package sealing
 
 import (
+	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
@@ -110,7 +111,12 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInf
 		}
 	}
 
-	smsg, err := m.api.SendPreCommitSector(ctx.Context(), sector.SectorNum, sector.CommR, sector.Ticket, sector.Pieces...)
+	expiration, err := m.preCommitPolicy.Expiration(ctx.Context(), sector.Pieces...)
+	if err != nil {
+		return ctx.Send(SectorPreCommitFailed{xerrors.Errorf("failed to compute pre-commit expiration: %w", err)})
+	}
+
+	smsg, err := m.api.SendPreCommitSector(ctx.Context(), sector.SectorNum, commcid.ReplicaCommitmentV1ToCID(sector.CommR), abi.ChainEpoch(sector.Ticket.BlockHeight), expiration, sector.Pieces...)
 	if err != nil {
 		return ctx.Send(SectorPreCommitFailed{xerrors.Errorf("failed to send pre-commit message: %w", err)})
 	}

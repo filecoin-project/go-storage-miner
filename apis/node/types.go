@@ -85,7 +85,7 @@ type DealInfo struct {
 	DealSchedule DealSchedule
 }
 
-// DealSchedule communicates the time interval of a stoage deal. The deal must
+// DealSchedule communicates the time interval of a storage deal. The deal must
 // appear in a sealed (proven) sector no later than StartEpoch, otherwise it
 // is invalid.
 type DealSchedule struct {

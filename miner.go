@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 
-	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
@@ -15,6 +13,8 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/go-storage-miner/apis/sectorbuilder"
+	"github.com/filecoin-project/go-storage-miner/policies/precommit"
+	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 	"github.com/filecoin-project/go-storage-miner/sealing"
 )
 
@@ -28,11 +28,11 @@ type Miner struct {
 	sealing *sealing.Sealing
 }
 
-func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy) (*Miner, error) {
-	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, sdp, nil)
+func NewMiner(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, pcp precommit.Policy) (*Miner, error) {
+	return NewMinerWithOnSectorUpdated(api, ds, sb, maddr, sdp, pcp, nil)
 }
 
-func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
+func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb sectorbuilder.Interface, maddr address.Address, sdp selfdeal.Policy, pcp precommit.Policy, onSectorUpdated func(abi.SectorNumber, sealing.SectorState)) (*Miner, error) {
 	m := &Miner{
 		api:     api,
 		maddr:   maddr,
@@ -42,9 +42,9 @@ func NewMinerWithOnSectorUpdated(api node.Interface, ds datastore.Batching, sb s
 	}
 
 	if onSectorUpdated != nil {
-		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, sdp, onSectorUpdated)
+		m.sealing = sealing.NewSealingWithOnSectorUpdated(m.api, m.sb, m.ds, m.maddr, sdp, pcp, onSectorUpdated)
 	} else {
-		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr, sdp)
+		m.sealing = sealing.NewSealing(m.api, m.sb, m.ds, m.maddr, sdp, pcp)
 	}
 
 	return m, nil

@@ -21,7 +21,7 @@ type fakeNode struct {
 	getSealedCID             func(ctx context.Context, tok node.TipSetToken, sectorNum abi.SectorNumber) (cid.Cid, bool, error)
 	getSealSeed              func(ctx context.Context, msg cid.Cid, interval uint64) (<-chan node.SealSeed, <-chan node.SeedInvalidated, <-chan node.FinalityReached, <-chan node.GetSealSeedError)
 	getSealTicket            func(context.Context, node.TipSetToken) (node.SealTicket, error)
-	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error)
+	sendPreCommitSector      func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error)
 	sendProveCommitSector    func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error)
 	sendReportFaults         func(ctx context.Context, sectorNums ...abi.SectorNumber) (cid.Cid, error)
 	sendSelfDeals            func(context.Context, abi.ChainEpoch, abi.ChainEpoch, ...abi.PieceInfo) (cid.Cid, error)
@@ -66,7 +66,7 @@ func newFakeNode() *fakeNode {
 				TicketBytes: []byte{1, 2, 3},
 			}, nil
 		},
-		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
+		sendPreCommitSector: func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
 			return createCidForTesting(42), nil
 		},
 		sendReportFaults: func(ctx context.Context, sectorNumbers ...abi.SectorNumber) (i cid.Cid, e error) {
@@ -121,8 +121,8 @@ func (f *fakeNode) GetSealTicket(ctx context.Context, tok node.TipSetToken) (nod
 	return f.getSealTicket(ctx, tok)
 }
 
-func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
-	return f.sendPreCommitSector(ctx, sectorNum, commR, ticket, pieces...)
+func (f *fakeNode) SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
+	return f.sendPreCommitSector(ctx, sectorNum, sealedCID, sealEpoch, expiration, pieces...)
 }
 
 func (f *fakeNode) SendProveCommitSector(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (cid.Cid, error) {
