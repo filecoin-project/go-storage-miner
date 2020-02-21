@@ -11,5 +11,5 @@ import (
 var log = logging.Logger("selfdeals")
 
 type Policy interface {
-	Schedule(ctx context.Context, pieces ...node.PieceWithOptionalDealInfo) (node.DealSchedule, error)
+	Schedule(ctx context.Context, pdis ...node.PieceWithOptionalDealInfo) (node.DealSchedule, error)
 }

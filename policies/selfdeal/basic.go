@@ -12,7 +12,7 @@ type Chain interface {
 	GetChainHead(ctx context.Context) (node.TipSetToken, abi.ChainEpoch, error)
 }
 
-// BasicPolicy is a SelfDealPolicy. It has two modes:
+// BasicPolicy satisfies selfdeal.Policy. It has two modes:
 //
 // Mode 1: The sector contains a non-zero quantity of client-provided pieces
 // Mode 2: The sector contains only self-deal pieces
@@ -24,7 +24,7 @@ type Chain interface {
 // If we're in Mode 1: The self-deal start and end-dates of the returned
 // DealSchedule will be set to the minimum and maximum start and end epoch
 // for pieces in the sector as long as at least one piece's deal contains both
-// start and end-dates which is in the future. Otherwise, fall back to Mode 2.
+// start and end-dates which is in the future.
 //
 // If we're in Mode 2: The self-deal start date will be set to the current
 // epoch + provingDelay. The self-deal end date will be set to the current epoch
