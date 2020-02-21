@@ -168,7 +168,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, commR []byte, ticket node.SealTicket, pieces ...node.PieceWithDealInfo) (i cid.Cid, e error) {
+		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
 			return cid.Undef, errors.New("expected error")
 		}
 
