@@ -11,10 +11,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, error) {
+func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, uint64, error) {
 	next, err := m.plan(events, user.(*SectorInfo))
 	if err != nil || next == nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	return func(ctx statemachine.Context, si SectorInfo) error {
@@ -25,7 +25,7 @@ func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface
 		}
 
 		return nil
-	}, nil
+	}, uint64(len(events)), nil
 }
 
 var fsmPlanners = []func(events []statemachine.Event, state *SectorInfo) error{
