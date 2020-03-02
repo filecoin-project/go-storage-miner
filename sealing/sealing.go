@@ -7,8 +7,6 @@ import (
 
 	"github.com/filecoin-project/go-storage-miner/policies/precommit"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
-
 	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 
 	"github.com/filecoin-project/go-address"
@@ -114,10 +112,7 @@ func (m *Sealing) SealPiece(ctx context.Context, size abi.UnpaddedPieceSize, r i
 	}
 
 	return m.newSector(ctx, sectorNum, node.PieceWithDealInfo{
-		Piece: abi.PieceInfo{
-			Size:     size.Padded(),
-			PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
-		},
+		Piece:    ppi,
 		DealInfo: dealInfo,
 	})
 }

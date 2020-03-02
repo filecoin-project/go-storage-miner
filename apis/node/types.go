@@ -1,10 +1,7 @@
 package node
 
 import (
-	commcid "github.com/filecoin-project/go-fil-commcid"
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
-	"golang.org/x/xerrors"
 )
 
 // TipSetToken is the implementation-nonspecific identity for a tipset.
@@ -31,24 +28,12 @@ type PieceInfo struct {
 
 type SealTicket struct {
 	BlockHeight uint64
-	TicketBytes []byte
-}
-
-func (t *SealTicket) SB() sectorbuilder.SealTicket {
-	out := sectorbuilder.SealTicket{BlockHeight: t.BlockHeight}
-	copy(out.TicketBytes[:], t.TicketBytes)
-	return out
+	TicketBytes abi.SealRandomness
 }
 
 type SealSeed struct {
 	BlockHeight uint64
-	TicketBytes []byte
-}
-
-func (t *SealSeed) SB() sectorbuilder.SealSeed {
-	out := sectorbuilder.SealSeed{BlockHeight: t.BlockHeight}
-	copy(out.TicketBytes[:], t.TicketBytes)
-	return out
+	TicketBytes abi.InteractiveSealRandomness
 }
 
 func (t *SealSeed) Equals(o *SealSeed) bool {
@@ -58,19 +43,6 @@ func (t *SealSeed) Equals(o *SealSeed) bool {
 type PieceWithDealInfo struct {
 	Piece    abi.PieceInfo
 	DealInfo DealInfo
-}
-
-func (p *PieceWithDealInfo) SB() (out sectorbuilder.PublicPieceInfo, err error) {
-	out.Size = p.Piece.Size.Unpadded()
-
-	commP, err := commcid.CIDToPieceCommitmentV1(p.Piece.PieceCID)
-	if err != nil {
-		return sectorbuilder.PublicPieceInfo{}, xerrors.Errorf("failed to map CID to CommP: ", err)
-	}
-
-	copy(out.CommP[:], commP)
-
-	return out, nil
 }
 
 // PieceWithOptionalDealInfo is a tuple of piece info and optional deal
