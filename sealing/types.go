@@ -1,11 +1,9 @@
 package sealing
 
 import (
-	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 )
 
 type Log struct {
@@ -50,20 +48,6 @@ type SectorInfo struct {
 	Log []Log
 }
 
-func (t *SectorInfo) pieceInfos() ([]sectorbuilder.PublicPieceInfo, error) {
-	out := make([]sectorbuilder.PublicPieceInfo, len(t.Pieces))
-	for i, piece := range t.Pieces {
-		ppi, err := piece.SB()
-		if err != nil {
-			return nil, xerrors.Errorf("failed to map to PublicPieceInfo: ", err)
-		}
-
-		out[i] = ppi
-	}
-
-	return out, nil
-}
-
 func (t *SectorInfo) deals() []abi.DealID {
 	out := make([]abi.DealID, len(t.Pieces))
 	for i, piece := range t.Pieces {
@@ -78,15 +62,6 @@ func (t *SectorInfo) existingPieces() []abi.PaddedPieceSize {
 	for i, piece := range t.Pieces {
 		out[i] = piece.Piece.Size
 	}
-
-	return out
-}
-
-func (t *SectorInfo) rspco() sectorbuilder.RawSealPreCommitOutput {
-	var out sectorbuilder.RawSealPreCommitOutput
-
-	copy(out.CommD[:], t.CommD)
-	copy(out.CommR[:], t.CommR)
 
 	return out
 }

@@ -15,8 +15,10 @@ func init() {
 }
 
 func (t *test) planSingle(evt interface{}) {
-	_, err := t.s.plan([]statemachine.Event{{evt}}, t.state)
+	events := []statemachine.Event{{evt}}
+	_, processed, err := t.s.plan(events, t.state)
 	require.NoError(t.t, err)
+	require.Equal(t.t, processed, uint64(len(events)))
 }
 
 type test struct {
@@ -75,12 +77,12 @@ func TestSeedRevert(t *testing.T) {
 	m.planSingle(SectorSeedReady{})
 	require.Equal(m.t, m.state.State, Committing)
 
-	_, err := m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
+	_, _, err := m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
 	require.NoError(t, err)
 	require.Equal(m.t, m.state.State, Committing)
 
 	// not changing the seed this time
-	_, err = m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
+	_, _, err = m.s.plan([]statemachine.Event{{SectorSeedReady{seed: node.SealSeed{BlockHeight: 5}}}, {SectorCommitted{}}}, m.state)
 	require.Equal(m.t, m.state.State, CommitWait)
 
 	m.planSingle(SectorProving{})

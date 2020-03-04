@@ -2,7 +2,6 @@ package sealing
 
 import (
 	commcid "github.com/filecoin-project/go-fil-commcid"
-	"github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/go-sectorbuilder/fs"
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
@@ -17,10 +16,10 @@ func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) err
 
 	var unpaddedAllocated abi.UnpaddedPieceSize
 	for _, paddedQty := range sector.existingPieces() {
-		unpaddedAllocated += sectorbuilder.UserBytesForSectorSize(abi.SectorSize(paddedQty))
+		unpaddedAllocated += abi.PaddedPieceSize(abi.SectorSize(paddedQty)).Unpadded()
 	}
 
-	unpaddedTotal := sectorbuilder.UserBytesForSectorSize(m.sb.SectorSize())
+	unpaddedTotal := abi.PaddedPieceSize(m.sb.SectorSize()).Unpadded()
 
 	if unpaddedAllocated > unpaddedTotal {
 		return xerrors.Errorf("too much data in sector: %d > %d", unpaddedAllocated, unpaddedTotal)
@@ -76,19 +75,29 @@ func (m *Sealing) handleUnsealed(ctx statemachine.Context, sector SectorInfo) er
 		return ctx.Send(SectorSealFailed{xerrors.Errorf("getting ticket failed: %w", err)})
 	}
 
-	pis, err := sector.pieceInfos()
-	if err != nil {
-		return ctx.Send(SectorSealFailed{xerrors.Errorf("getting piece infos failed: %w", err)})
+	pis := make([]abi.PieceInfo, len(sector.Pieces))
+	for idx := range pis {
+		pis[idx] = sector.Pieces[idx].Piece
 	}
 
-	rspco, err := m.sb.SealPreCommit(ctx.Context(), sector.SectorNum, ticket.SB(), pis)
+	sealedCID, unsealedCID, err := m.sb.SealPreCommit(ctx.Context(), sector.SectorNum, ticket.TicketBytes, pis)
 	if err != nil {
 		return ctx.Send(SectorSealFailed{xerrors.Errorf("seal pre commit failed: %w", err)})
 	}
 
+	commR, err := commcid.CIDToReplicaCommitmentV1(sealedCID)
+	if err != nil {
+		return ctx.Send(SectorSealFailed{xerrors.Errorf("failed to convert to CommR from sealed CID: %w", err)})
+	}
+
+	commD, err := commcid.CIDToDataCommitmentV1(unsealedCID)
+	if err != nil {
+		return ctx.Send(SectorSealFailed{xerrors.Errorf("failed to convert to CommD from sealed CID: %w", err)})
+	}
+
 	return ctx.Send(SectorSealed{
-		commD: rspco.CommD[:],
-		commR: rspco.CommR[:],
+		commD: commD,
+		commR: commR,
 		ticket: node.SealTicket{
 			BlockHeight: ticket.BlockHeight,
 			TicketBytes: ticket.TicketBytes[:],
@@ -158,12 +167,15 @@ func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) er
 func (m *Sealing) handleCommitting(ctx statemachine.Context, sector SectorInfo) error {
 	log.Info("scheduling seal proof computation...")
 
-	pis, err := sector.pieceInfos()
-	if err != nil {
-		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("failed to get piece infos for computing seal proof: %w", err)})
+	pis := make([]abi.PieceInfo, len(sector.Pieces))
+	for idx := range pis {
+		pis[idx] = sector.Pieces[idx].Piece
 	}
 
-	proof, err := m.sb.SealCommit(ctx.Context(), sector.SectorNum, sector.Ticket.SB(), sector.Seed.SB(), pis, sector.rspco())
+	sealedCID := commcid.ReplicaCommitmentV1ToCID(sector.CommR)
+	unsealedCID := commcid.DataCommitmentV1ToCID(sector.CommD)
+
+	proof, err := m.sb.SealCommit(ctx.Context(), sector.SectorNum, sector.Ticket.TicketBytes, sector.Seed.TicketBytes, pis, sealedCID, unsealedCID)
 	if err != nil {
 		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("computing seal proof failed: %w", err)})
 	}

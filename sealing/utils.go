@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"sync"
 
+	"github.com/ipfs/go-cid"
+
 	sectorbuilder "github.com/filecoin-project/go-sectorbuilder"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/hashicorp/go-multierror"
@@ -58,8 +60,12 @@ func fillersFromRem(toFill abi.UnpaddedPieceSize) ([]abi.UnpaddedPieceSize, erro
 	return out, nil
 }
 
-// FastPledgeCommitment generates parts-quantity piece commitments in parallel.
-func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64) (commP [sectorbuilder.CommLen]byte, err error) {
+// FastPledgeCommitment generates a file containing parts-quantity pieces, each
+// containing size-quantity junk bytes, and returns that file's unsealed CID.
+//
+// NOTE: This function was copied from lotus, and lotus has since deleted it. We
+// will delete it too when we re-extract the lotus storage mining code.
+func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64) (unsealedCID cid.Cid, err error) {
 	n := uint64(size)
 
 	parts = 1 << bits.Len64(parts) // round down to nearest power of 2
@@ -67,8 +73,8 @@ func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64)
 		parts = n / 127
 	}
 
-	piece := sectorbuilder.UserBytesForSectorSize(abi.SectorSize((n + n/127) / parts))
-	out := make([]sectorbuilder.PublicPieceInfo, parts)
+	unpaddedPieceSize := abi.PaddedPieceSize(abi.SectorSize((n + n/127) / parts)).Unpadded()
+	out := make([]abi.PieceInfo, parts)
 	var lk sync.Mutex
 
 	var wg sync.WaitGroup
@@ -76,16 +82,15 @@ func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64)
 	for i := uint64(0); i < parts; i++ {
 		go func(i uint64) {
 			defer wg.Done()
-
-			commP, perr := sectorbuilder.GeneratePieceCommitment(io.LimitReader(rand.New(rand.NewSource(42+int64(i))), int64(piece)), piece)
+			pieceCID, perr := sectorbuilder.GeneratePieceCIDFromFile(m.sb.SealProofType(), io.LimitReader(rand.New(rand.NewSource(42+int64(i))), int64(unpaddedPieceSize)), unpaddedPieceSize)
 
 			lk.Lock()
 			if perr != nil {
 				err = multierror.Append(err, perr)
 			}
-			out[i] = sectorbuilder.PublicPieceInfo{
-				Size:  piece,
-				CommP: commP,
+			out[i] = abi.PieceInfo{
+				Size:     unpaddedPieceSize.Padded(),
+				PieceCID: pieceCID,
 			}
 			lk.Unlock()
 		}(i)
@@ -93,10 +98,10 @@ func (m *Sealing) FastPledgeCommitment(size abi.UnpaddedPieceSize, parts uint64)
 	wg.Wait()
 
 	if err != nil {
-		return [32]byte{}, err
+		return cid.Undef, err
 	}
 
-	return sectorbuilder.GenerateDataCommitment(m.sb.SectorSize(), out)
+	return sectorbuilder.GenerateUnsealedCID(m.sb.SealProofType(), out)
 }
 
 func (m *Sealing) ListSectors() ([]SectorInfo, error) {

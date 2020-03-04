@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"runtime"
 
-	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
@@ -45,7 +44,11 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 	fillers := make([]node.PieceWithOptionalDealInfo, len(fillerPieceSizes))
 	for idx := range fillerPieceSizes {
-		commP, err := m.FastPledgeCommitment(fillerPieceSizes[idx], uint64(1))
+		// NOTE: This software was copied from lotus, and lotus assumed that
+		// the returned data commitment could be used in place of a piece
+		// commitment. Today, the underlying CID codec is identical, so that
+		// assumption holds.
+		unsealedCID, err := m.FastPledgeCommitment(fillerPieceSizes[idx], uint64(1))
 		if err != nil {
 			return nil, handle("failed to generate pledge commitment: ", err)
 		}
@@ -53,7 +56,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		fillers[idx] = node.PieceWithOptionalDealInfo{
 			Piece: abi.PieceInfo{
 				Size:     fillerPieceSizes[idx].Padded(),
-				PieceCID: commcid.PieceCommitmentV1ToCID(commP[:]),
+				PieceCID: unsealedCID,
 			},
 			DealInfo: nil,
 		}
@@ -116,7 +119,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 	}
 
 	for idx := range fillerPieceSizes {
-		ppi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
+		pi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
 		if err != nil {
 			return nil, handle("add piece: %w", err)
 		}
@@ -125,10 +128,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 		// extend the slice with the newly-self-dealt piece
 		out = append(out, node.PieceWithDealInfo{
-			Piece: abi.PieceInfo{
-				Size:     ppi.Size.Padded(),
-				PieceCID: commcid.PieceCommitmentV1ToCID(ppi.CommP[:]),
-			},
+			Piece: pi,
 			DealInfo: node.DealInfo{
 				DealID:       dealIDs[idx],
 				DealSchedule: schedule,
