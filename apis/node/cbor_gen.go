@@ -243,7 +243,7 @@ func (t *SealTicket) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.TicketBytes ([]uint8) (slice)
+	// t.TicketBytes (abi.SealRandomness) (slice)
 	if len(t.TicketBytes) > cbg.ByteArrayMaxLen {
 		return xerrors.Errorf("Byte array in field t.TicketBytes was too long")
 	}
@@ -282,7 +282,7 @@ func (t *SealTicket) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	t.BlockHeight = uint64(extra)
-	// t.TicketBytes ([]uint8) (slice)
+	// t.TicketBytes (abi.SealRandomness) (slice)
 
 	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
@@ -316,7 +316,7 @@ func (t *SealSeed) MarshalCBOR(w io.Writer) error {
 		return err
 	}
 
-	// t.TicketBytes ([]uint8) (slice)
+	// t.TicketBytes (abi.InteractiveSealRandomness) (slice)
 	if len(t.TicketBytes) > cbg.ByteArrayMaxLen {
 		return xerrors.Errorf("Byte array in field t.TicketBytes was too long")
 	}
@@ -355,7 +355,7 @@ func (t *SealSeed) UnmarshalCBOR(r io.Reader) error {
 		return fmt.Errorf("wrong type for uint64 field")
 	}
 	t.BlockHeight = uint64(extra)
-	// t.TicketBytes ([]uint8) (slice)
+	// t.TicketBytes (abi.InteractiveSealRandomness) (slice)
 
 	maj, extra, err = cbg.CborReadHeader(br)
 	if err != nil {
