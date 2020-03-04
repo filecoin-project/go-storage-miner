@@ -11,10 +11,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface{}, uint64, error) {
-	next, err := m.plan(events, user.(*SectorInfo))
-	if err != nil || next == nil {
+func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (f interface{}, processed uint64, err error) {
+	next, processed, err := m.plan(events, user.(*SectorInfo))
+	if err != nil {
 		return nil, 0, err
+	}
+
+	if next == nil {
+		return nil, processed, nil
 	}
 
 	return func(ctx statemachine.Context, si SectorInfo) error {
@@ -25,7 +29,7 @@ func (m *Sealing) Plan(events []statemachine.Event, user interface{}) (interface
 		}
 
 		return nil
-	}, uint64(len(events)), nil
+	}, processed, nil
 }
 
 var fsmPlanners = []func(events []statemachine.Event, state *SectorInfo) error{
@@ -75,7 +79,7 @@ var fsmPlanners = []func(events []statemachine.Event, state *SectorInfo) error{
 	FaultedFinal: final,
 }
 
-func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(statemachine.Context, SectorInfo) error, error) {
+func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(statemachine.Context, SectorInfo) error, uint64, error) {
 	/////
 	// First process all events
 
@@ -95,11 +99,11 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 
 	p := fsmPlanners[state.State]
 	if p == nil {
-		return nil, xerrors.Errorf("planner for state %s not found", SectorStates[state.State])
+		return nil, 0, xerrors.Errorf("planner for state %s not found", SectorStates[state.State])
 	}
 
 	if err := p(events, state); err != nil {
-		return nil, xerrors.Errorf("running planner for state %s failed: %w", SectorStates[state.State], err)
+		return nil, 0, xerrors.Errorf("running planner for state %s failed: %w", SectorStates[state.State], err)
 	}
 
 	if m.onSectorUpdated != nil {
@@ -143,31 +147,33 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 
 	*/
 
+	processed := uint64(len(events))
+
 	switch state.State {
 	// Happy path
 	case Packing:
-		return m.handlePacking, nil
+		return m.handlePacking, processed, nil
 	case Unsealed:
-		return m.handleUnsealed, nil
+		return m.handleUnsealed, processed, nil
 	case PreCommitting:
-		return m.handlePreCommitting, nil
+		return m.handlePreCommitting, processed, nil
 	case WaitSeed:
-		return m.handleWaitSeed, nil
+		return m.handleWaitSeed, processed, nil
 	case Committing:
-		return m.handleCommitting, nil
+		return m.handleCommitting, processed, nil
 	case CommitWait:
-		return m.handleCommitWait, nil
+		return m.handleCommitWait, processed, nil
 	case FinalizeSector:
-		return m.handleFinalizeSector, nil
+		return m.handleFinalizeSector, processed, nil
 	case Proving:
 		// TODO: track sector health / expiration
 		log.Infof("Proving sector %d", state.SectorNum)
 
 	// Handled failure modes
 	case SealFailed:
-		return m.handleSealFailed, nil
+		return m.handleSealFailed, processed, nil
 	case PreCommitFailed:
-		return m.handlePreCommitFailed, nil
+		return m.handlePreCommitFailed, processed, nil
 	case SealCommitFailed:
 		log.Warnf("sector %d entered unimplemented state 'SealCommitFailed'", state.SectorNum)
 	case CommitFailed:
@@ -175,9 +181,9 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 
 		// Faults
 	case Faulty:
-		return m.handleFaulty, nil
+		return m.handleFaulty, processed, nil
 	case FaultReported:
-		return m.handleFaultReported, nil
+		return m.handleFaultReported, processed, nil
 
 	// Fatal errors
 	case UndefinedSectorState:
@@ -188,7 +194,7 @@ func (m *Sealing) plan(events []statemachine.Event, state *SectorInfo) (func(sta
 		log.Errorf("unexpected sector update state: %d", state.State)
 	}
 
-	return nil, nil
+	return nil, processed, nil
 }
 
 func planCommitting(events []statemachine.Event, state *SectorInfo) error {
