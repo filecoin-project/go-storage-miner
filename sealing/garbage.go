@@ -119,7 +119,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 	}
 
 	for idx := range fillerPieceSizes {
-		ppi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
+		pi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
 		if err != nil {
 			return nil, handle("add piece: %w", err)
 		}
@@ -128,7 +128,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 
 		// extend the slice with the newly-self-dealt piece
 		out = append(out, node.PieceWithDealInfo{
-			Piece: ppi,
+			Piece: pi,
 			DealInfo: node.DealInfo{
 				DealID:       dealIDs[idx],
 				DealSchedule: schedule,
