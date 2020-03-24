@@ -37,7 +37,7 @@ func (m *Sealing) pledgeReader(size abi.UnpaddedPieceSize, parts uint64) io.Read
 // piece and deal metadata associated with that sector is returned.
 func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, existing []node.PieceWithDealInfo, fillerPieceSizes ...abi.UnpaddedPieceSize) ([]node.PieceWithDealInfo, error) {
 	if len(fillerPieceSizes) == 0 {
-		return existing, nil
+		return []node.PieceWithDealInfo{}, nil
 	}
 
 	log.Infof("Pledge %d, contains %+v", sectorNum, existing)
@@ -113,10 +113,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 		existingSizes[idx] = existing[idx].Piece.Size.Unpadded()
 	}
 
-	out := make([]node.PieceWithDealInfo, len(existing))
-	for idx := range existing {
-		out[idx] = existing[idx]
-	}
+	out := []node.PieceWithDealInfo{}
 
 	for idx := range fillerPieceSizes {
 		pi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
