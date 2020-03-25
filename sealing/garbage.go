@@ -5,7 +5,6 @@ import (
 	"io"
 	"math/bits"
 	"math/rand"
-	"runtime"
 
 	"github.com/filecoin-project/specs-actors/actors/abi"
 
@@ -117,7 +116,7 @@ func (m *Sealing) pledgeSector(ctx context.Context, sectorNum abi.SectorNumber, 
 	out := []node.PieceWithDealInfo{}
 
 	for idx := range fillerPieceSizes {
-		pi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(runtime.NumCPU())), existingSizes)
+		pi, err := m.sb.AddPiece(ctx, fillerPieceSizes[idx], sectorNum, m.pledgeReader(fillerPieceSizes[idx], uint64(1)), existingSizes)
 		if err != nil {
 			return nil, handle("add piece: %w", err)
 		}

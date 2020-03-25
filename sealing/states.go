@@ -6,10 +6,9 @@ import (
 	"github.com/filecoin-project/go-statemachine"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	"github.com/filecoin-project/specs-actors/actors/builtin/miner"
 	"golang.org/x/xerrors"
 )
-
-const InteractivePoRepDelay = 8
 
 func (m *Sealing) handlePacking(ctx statemachine.Context, sector SectorInfo) error {
 	log.Infow("performing filling up rest of the sector...", "sector", sector.SectorNum)
@@ -134,7 +133,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInf
 }
 
 func (m *Sealing) handleWaitSeed(ctx statemachine.Context, sector SectorInfo) error {
-	seedChan, invalidated, done, errChan := m.api.GetSealSeed(ctx.Context(), *sector.PreCommitMessage, InteractivePoRepDelay)
+	seedChan, invalidated, done, errChan := m.api.GetSealSeed(ctx.Context(), *sector.PreCommitMessage, uint64(miner.PreCommitChallengeDelay))
 
 	for {
 		select {
