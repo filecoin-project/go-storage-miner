@@ -113,7 +113,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 			return []abi.DealID{abi.DealID(42), abi.DealID(43)}, 0, nil
 		}
 
-		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (c cid.Cid, err error) {
+		n.sendPreCommitSector = func(ctx context.Context, proofType abi.RegisteredProof, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (c cid.Cid, err error) {
 			for idx := range pieces {
 				preCommitSectorPieceSizes = append(preCommitSectorPieceSizes, pieces[idx].Piece.Size.Unpadded())
 			}
@@ -184,7 +184,7 @@ func TestHandlesPreCommitSectorSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
+		n.sendPreCommitSector = func(ctx context.Context, proofType abi.RegisteredProof, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (cid.Cid, error) {
 			return cid.Undef, errors.New("expected error")
 		}
 
@@ -230,7 +230,7 @@ func TestHandlesProveCommitSectorMessageSendFailed(t *testing.T) {
 	fakeNode := func() *fakeNode {
 		n := newFakeNode()
 
-		n.sendProveCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (i cid.Cid, e error) {
+		n.sendProveCommitSector = func(ctx context.Context, proofType abi.RegisteredProof, sectorNum abi.SectorNumber, proof []byte, dealIds ...abi.DealID) (i cid.Cid, e error) {
 			return cid.Undef, errors.New("expected error")
 		}
 

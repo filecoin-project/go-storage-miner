@@ -23,11 +23,11 @@ type Interface interface {
 
 	// SendPreCommitSector publishes the miner's pre-commitment of a sector to a
 	// particular chain and returns the identity of the corresponding message.
-	SendPreCommitSector(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...PieceWithDealInfo) (cid.Cid, error)
+	SendPreCommitSector(ctx context.Context, proofType abi.RegisteredProof, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...PieceWithDealInfo) (cid.Cid, error)
 
 	// SendProveCommitSector publishes the miner's seal proof and returns the
 	// the identity of the corresponding message.
-	SendProveCommitSector(ctx context.Context, sectorNum abi.SectorNumber, proof []byte, dealids ...abi.DealID) (cid.Cid, error)
+	SendProveCommitSector(ctx context.Context, proofType abi.RegisteredProof, sectorNum abi.SectorNumber, proof []byte, dealids ...abi.DealID) (cid.Cid, error)
 
 	// WaitForProveCommitSector blocks until the provided message is mined into
 	// a block.

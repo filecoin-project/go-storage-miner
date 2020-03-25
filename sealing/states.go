@@ -125,7 +125,7 @@ func (m *Sealing) handlePreCommitting(ctx statemachine.Context, sector SectorInf
 		return ctx.Send(SectorPreCommitFailed{xerrors.Errorf("failed to compute pre-commit expiration: %w", err)})
 	}
 
-	smsg, err := m.api.SendPreCommitSector(ctx.Context(), sector.SectorNum, commcid.ReplicaCommitmentV1ToCID(sector.CommR), abi.ChainEpoch(sector.Ticket.BlockHeight), expiration, sector.Pieces...)
+	smsg, err := m.api.SendPreCommitSector(ctx.Context(), m.sb.SealProofType(), sector.SectorNum, commcid.ReplicaCommitmentV1ToCID(sector.CommR), abi.ChainEpoch(sector.Ticket.BlockHeight), expiration, sector.Pieces...)
 	if err != nil {
 		return ctx.Send(SectorPreCommitFailed{xerrors.Errorf("failed to send pre-commit message: %w", err)})
 	}
@@ -180,7 +180,7 @@ func (m *Sealing) handleCommitting(ctx statemachine.Context, sector SectorInfo) 
 		return ctx.Send(SectorComputeProofFailed{xerrors.Errorf("computing seal proof failed: %w", err)})
 	}
 
-	smsg, err := m.api.SendProveCommitSector(ctx.Context(), sector.SectorNum, proof, sector.deals()...)
+	smsg, err := m.api.SendProveCommitSector(ctx.Context(), m.sb.SealProofType(), sector.SectorNum, proof, sector.deals()...)
 	if err != nil {
 		return ctx.Send(SectorCommitFailed{xerrors.Errorf("error sending prove commit sector: %w", err)})
 	}
