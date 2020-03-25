@@ -8,17 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/filecoin-project/go-storage-miner/policies/precommit"
-
-	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
-
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	"github.com/multiformats/go-multihash"
 
 	"github.com/filecoin-project/go-storage-miner"
 	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-storage-miner/policies/precommit"
+	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
 	"github.com/filecoin-project/go-storage-miner/sealing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,6 +87,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	// we'll assert the contents of these slices at the end of the test
 	var selfDealPieceSizes []abi.UnpaddedPieceSize
 	var selfDealSchedule node.DealSchedule
+	var preCommitSectorPieceSizes []abi.UnpaddedPieceSize
 
 	// configure behavior of the fake node
 	fakeNode := func() *fakeNode {
@@ -111,6 +111,17 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 
 		n.waitForSelfDeals = func(i context.Context, i2 cid.Cid) (dealIds []abi.DealID, exitCode uint8, err error) {
 			return []abi.DealID{abi.DealID(42), abi.DealID(43)}, 0, nil
+		}
+
+		n.sendPreCommitSector = func(ctx context.Context, sectorNum abi.SectorNumber, sealedCID cid.Cid, sealEpoch, expiration abi.ChainEpoch, pieces ...node.PieceWithDealInfo) (c cid.Cid, err error) {
+			for idx := range pieces {
+				preCommitSectorPieceSizes = append(preCommitSectorPieceSizes, pieces[idx].Piece.Size.Unpadded())
+			}
+
+			encode, err := multihash.Encode([]byte{42, 42, 42}, multihash.IDENTITY)
+			require.NoError(t, err)
+
+			return cid.NewCidV1(cid.Raw, encode), nil
 		}
 
 		return n
@@ -153,6 +164,7 @@ func TestSealPieceCreatesSelfDealsToFillSector(t *testing.T) {
 	select {
 	case <-doneCh:
 		require.Equal(t, 2, len(selfDealPieceSizes), "expected two self-deals")
+		require.Equal(t, 3, len(preCommitSectorPieceSizes), "expected three pieces in the sector")
 		assert.Equal(t, int(abi.UnpaddedPieceSize(254)), int(selfDealPieceSizes[0]))
 		assert.Equal(t, int(abi.UnpaddedPieceSize(508)), int(selfDealPieceSizes[1]))
 		assert.Greater(t, int(selfDealSchedule.StartEpoch), 0)
