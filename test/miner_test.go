@@ -18,7 +18,8 @@ import (
 	"github.com/filecoin-project/go-storage-miner/apis/node"
 	"github.com/filecoin-project/go-storage-miner/policies/precommit"
 	"github.com/filecoin-project/go-storage-miner/policies/selfdeal"
-	"github.com/filecoin-project/go-storage-miner/sealing"
+	"github.com/filecoin-project/storage-fsm"
+	sealing "github.com/filecoin-project/storage-fsm"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

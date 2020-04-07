@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
-	sealing2 "github.com/filecoin-project/go-storage-miner/sealing"
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	sealing2 "github.com/filecoin-project/storage-fsm"
 )
 
 // AllocatePiece produces information about where a piece of a given size can

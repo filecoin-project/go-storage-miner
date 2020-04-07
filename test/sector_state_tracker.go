@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/filecoin-project/go-storage-miner/sealing"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/filecoin-project/specs-actors/actors/abi"
+	sealing "github.com/filecoin-project/storage-fsm"
 )
 
 type sectorStateTracker struct {

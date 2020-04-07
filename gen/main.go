@@ -7,7 +7,7 @@ import (
 	gen "github.com/whyrusleeping/cbor-gen"
 
 	"github.com/filecoin-project/go-storage-miner/apis/node"
-	"github.com/filecoin-project/go-storage-miner/sealing"
+	sealing "github.com/filecoin-project/storage-fsm"
 )
 
 func main() {
