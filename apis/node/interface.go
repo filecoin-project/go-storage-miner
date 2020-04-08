@@ -3,11 +3,9 @@ package node
 import (
 	"context"
 
-	"github.com/filecoin-project/specs-actors/actors/abi"
-
-	fsm "github.com/filecoin-project/storage-fsm"
-
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/specs-actors/actors/abi"
+	fsm "github.com/filecoin-project/storage-fsm"
 )
 
 type Interface interface {
