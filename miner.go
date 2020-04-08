@@ -5,17 +5,17 @@ import (
 	"errors"
 	"io"
 
-	sectorstorage "github.com/filecoin-project/sector-storage"
-	"github.com/filecoin-project/sector-storage/ffiwrapper"
-
-	"github.com/filecoin-project/go-address"
-	"github.com/filecoin-project/specs-actors/actors/abi"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"golang.org/x/xerrors"
 
-	"github.com/filecoin-project/go-storage-miner/apis/node"
+	"github.com/filecoin-project/go-address"
+	sectorstorage "github.com/filecoin-project/sector-storage"
+	"github.com/filecoin-project/sector-storage/ffiwrapper"
+	"github.com/filecoin-project/specs-actors/actors/abi"
 	sealing2 "github.com/filecoin-project/storage-fsm"
+
+	"github.com/filecoin-project/go-storage-miner/apis/node"
 )
 
 var log = logging.Logger("storageminer")
