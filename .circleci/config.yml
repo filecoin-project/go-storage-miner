@@ -11,6 +11,11 @@ executors:
 commands:
   install-deps:
     steps:
+      - run:
+          name: Install Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            echo 'export PATH="$HOME"/.cargo/bin:"$PATH"' >> "$BASH_ENV"
       - go/install-ssh
       - go/install: {package: git}
   prepare:
@@ -28,7 +33,7 @@ commands:
       - when:
           condition: << parameters.linux >>
           steps:
-            - run: sudo apt-get update
+            - run: sudo apt-get update --allow-releaseinfo-change
             - run: sudo apt-get install ocl-icd-opencl-dev
       - run: git submodule sync
       - run: git submodule update --init
@@ -85,7 +90,8 @@ jobs:
   build-macos:
     description: build with Darwin
     macos:
-      xcode: "10.0.0"
+      xcode: "13.4.1"
+    resource_class: macos.x86.medium.gen2
     working_directory: ~/go/src/github.com/filecoin-project/go-storage-miner
     steps:
       - prepare:
@@ -96,18 +102,15 @@ jobs:
           command: |
             curl -O https://dl.google.com/go/go1.13.4.darwin-amd64.pkg && \
             sudo installer -pkg go1.13.4.darwin-amd64.pkg -target /
+            echo 'export PATH=/usr/local/go/bin:$PATH' >> $BASH_ENV
       - run:
           name: Install pkg-config
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config
       - run: go version
       - run:
-          name: Install Rust
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - run:
           name: Install jq
           command: |
-            curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output /usr/local/bin/jq
+            sudo curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output /usr/local/bin/jq
             chmod +x /usr/local/bin/jq
       - restore_cache:
           name: restore go mod and cargo cache
