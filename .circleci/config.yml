@@ -91,7 +91,7 @@ jobs:
     description: build with Darwin
     macos:
       xcode: "13.4.1"
-    resource_class: macos.x86.medium.gen2
+    resource_class: macos.m1.medium.gen1
     working_directory: ~/go/src/github.com/filecoin-project/go-storage-miner
     steps:
       - prepare:
@@ -100,9 +100,12 @@ jobs:
       - run:
           name: Install go
           command: |
-            curl -O https://dl.google.com/go/go1.13.4.darwin-amd64.pkg && \
-            sudo installer -pkg go1.13.4.darwin-amd64.pkg -target /
+            curl -O https://dl.google.com/go/go1.16.15.darwin-arm64.pkg && \
+            sudo installer -pkg go1.16.15.darwin-arm64.pkg -target /
             echo 'export PATH=/usr/local/go/bin:$PATH' >> $BASH_ENV
+      - run:
+          name: Go mod tidy # This is required because we use newer go version than the one defined in go.mod
+          command: go mod tidy
       - run:
           name: Install pkg-config
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config
@@ -110,8 +113,8 @@ jobs:
       - run:
           name: Install jq
           command: |
-            sudo curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output /usr/local/bin/jq
-            chmod +x /usr/local/bin/jq
+            sudo curl --location https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-arm64 --output /usr/local/bin/jq
+            sudo chmod +x /usr/local/bin/jq
       - restore_cache:
           name: restore go mod and cargo cache
           key: v1-go-deps-{{ arch }}-{{ checksum "~/go/src/github.com/filecoin-project/go-storage-miner/go.sum" }}
